@@ -28,7 +28,7 @@
         }
         header { background: white; width: 100%; text-align: center; padding: 12px 0; box-shadow: 0 2px 10px rgba(0,0,0,.1); }
         .header-title { font-size: 22px; font-weight: bold; color: var(--primary-blue); margin: 0; }
-        .brand-logo { height: 84px; width: auto; display: inline-block; margin-bottom: 2px; }
+        .brand-logo { height: 120px; width: auto; display: inline-block; margin-bottom: 2px; }
         .header-sub { font-size: 12px; color: #888; margin: 0; }
         .container { width: 95%; max-width: 540px; margin: 15px 0; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,.05); }
         .form-group { margin-bottom: 12px; }
@@ -83,6 +83,22 @@
         .parada-num { background: var(--primary-blue); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; }
         .presenca { display: flex; gap: 6px; margin-top: 6px; }
         .presenca button { flex: 1; }
+        .fin-hero { border-radius: 18px; padding: 18px; color: white; text-align: center; margin-bottom: 12px; }
+        .fin-hero h3 { margin: 0; font-size: 30px; color: inherit; }
+        .fin-hero p { margin: 4px 0 0; font-size: 13px; opacity: .92; }
+        .fin-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        .fin-card { flex: 1; min-width: 130px; background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 12px; }
+        .fin-card .t { font-size: 12px; color: #888; }
+        .fin-card .v { font-size: 18px; font-weight: bold; margin-top: 4px; color: #333; }
+        .fin-card .v.g { color: var(--success-green); }
+        .fin-card .v.o { color: var(--warning-orange); }
+        .fin-card .v.r { color: var(--danger-red); }
+        .exp-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+        .exp-cat { font-size: 11px; color: #888; }
+        .resumo-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+        .resumo-item:last-child { border-bottom: none; }
+        .quinzena-title { font-size: 16px; font-weight: bold; color: var(--primary-blue); margin: 18px 0 10px; padding-bottom: 5px; border-bottom: 2px solid var(--primary-blue); }
+        .empty-msg { color: #999; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -164,11 +180,22 @@
             ],
             trips: [],
             payments: [],
+            expenses: [],
             trip_active: null
         };
 
         let db = load();
-        function load() { try { const raw = localStorage.getItem(LS_KEY); if (raw) return JSON.parse(raw); } catch(e){} return JSON.parse(JSON.stringify(seed)); }
+        function load() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                if (raw) {
+                    const d = JSON.parse(raw);
+                    if (!d.expenses) d.expenses = [];
+                    return d;
+                }
+            } catch(e){}
+            return JSON.parse(JSON.stringify(seed));
+        }
         function save() { localStorage.setItem(LS_KEY, JSON.stringify(db)); }
         function resetDB() { db = JSON.parse(JSON.stringify(seed)); save(); render(); }
 
@@ -180,8 +207,8 @@
         function hoje() { const d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
         function money(v) { return 'R$ '+Number(v).toFixed(2).replace('.',','); }
         function statusBadge(s) {
-            const map = { pendente:'b-pendente', pendente_pagamento:'b-aguardando', aprovado:'b-aprovado', ativo:'b-ativo', vencido:'b-vencido', cancelado:'b-cancelado', reprovado:'b-reprovado', agendado:'b-aguardando', iniciado:'b-aguardando', em_andamento:'b-aguardando', finalizado:'b-ativo' };
-            const label = { pendente:'Pendente', pendente_pagamento:'Aguardando pagamento', aprovado:'Aprovado', ativo:'Ativo', vencido:'Vencido', cancelado:'Cancelado', reprovado:'Reprovado', agendado:'Agendado', iniciado:'Iniciado', em_andamento:'Em andamento', finalizado:'Finalizado' };
+            const map = { pendente:'b-pendente', pendente_pagamento:'b-aguardando', aprovado:'b-aprovado', ativo:'b-ativo', vencido:'b-vencido', cancelado:'b-cancelado', reprovado:'b-reprovado', agendado:'b-aguardando', iniciado:'b-aguardando', em_andamento:'b-aguardando', finalizado:'b-ativo', pago:'b-ativo' };
+            const label = { pendente:'Pendente', pendente_pagamento:'Aguardando pagamento', aprovado:'Aprovado', ativo:'Ativo', vencido:'Vencido', cancelado:'Cancelado', reprovado:'Reprovado', agendado:'Agendado', iniciado:'Iniciado', em_andamento:'Em andamento', finalizado:'Finalizado', pago:'Pago' };
             return '<span class="badge '+(map[s]||'')+'">'+(label[s]||s)+'</span>';
         }
         function userNome(uid) { const u = db.users.find(x=>x.id===uid); return u ? u.nome : '-'; }
@@ -594,21 +621,51 @@
             return `
                 <h3>Cadastrar usu\u00e1rio</h3>
                 <div class="item" style="border-style:dashed;">
-                    <div class="form-group"><label>Nome completo</label><input id="nuNome" placeholder="Nome e sobrenome"></div>
-                    <div class="form-group"><label>CPF</label><input id="nuCpf" placeholder="000.000.000-00"></div>
-                    <div class="form-group"><label>E-mail</label><input id="nuEmail" type="email"></div>
-                    <div class="form-group"><label>WhatsApp</label><input id="nuWhats" placeholder="(11) 99999-9999"></div>
-                    <div class="form-group"><label>Perfil</label><select id="nuTipo">${tipos.map(t=>`<option value="${t}">${labels[t]}</option>`).join('')}</select></div>
-                    <div class="form-group"><label>Endere\u00e7o (opcional)</label><input id="nuEnd" placeholder="Rua, n\u00famero, bairro"></div>
-                    <button class="btn btn-add" onclick="salvarCadastroAdmin()">Cadastrar usu\u00e1rio</button>
+                    <div class="form-group"><label>Perfil</label><select id="nuTipo" onchange="togglePerfilCampos()">
+                        <option value="responsavel">Respons\u00e1vel / Aluno</option>
+                        <option value="motorista">Motorista</option>
+                        <option value="admin">Administrativo</option>
+                    </select></div>
+
+                    <div id="camposResponsavel">
+                        <div class="form-group"><label>Nome do aluno</label><input id="rAluno" placeholder="Nome da crian\u00e7a"></div>
+                        <div class="form-group"><label>Nome do respons\u00e1vel</label><input id="rResp" placeholder="Pai / m\u00e3e / respons\u00e1vel"></div>
+                        <div class="grid2">
+                            <div class="form-group"><label>CPF</label><input id="rCpf" placeholder="000.000.000-00"></div>
+                            <div class="form-group"><label>WhatsApp</label><input id="rWhats" placeholder="(11) 99999-9999"></div>
+                        </div>
+                        <div class="form-group"><label>E-mail (login)</label><input id="rEmail" type="email"></div>
+                        <div class="form-group"><label>Escola</label><input id="rEscola" placeholder="Nome da escola"></div>
+                        <div class="grid2">
+                            <div class="form-group"><label>Per\u00edodo</label><select id="rPeriodo"><option value="manha">Manh\u00e3</option><option value="tarde">Tarde</option></select></div>
+                            <div class="form-group"><label>Professor(a)</label><input id="rProfessor"></div>
+                        </div>
+                        <div class="grid2">
+                            <div class="form-group"><label>Valor da mensalidade (R$)</label><input id="rValor" type="number" min="0" step="0.01" placeholder="0,00"></div>
+                            <div class="form-group"><label>Quinzena de cobran\u00e7a</label><select id="rQuinzena"><option value="dia5">Dia 5 (1\u00aa Quinzena)</option><option value="dia20">Dia 20 (2\u00aa Quinzena)</option></select></div>
+                        </div>
+                        <div class="form-group"><label>Endere\u00e7o de embarque (onde pega a crian\u00e7a)</label><input id="rEmbarque" placeholder="Rua, n\u00famero, bairro"></div>
+                        <div class="form-group"><label>Endere\u00e7o de entrega (escola)</label><input id="rEntrega" placeholder="Rua, n\u00famero, bairro"></div>
+                    </div>
+
+                    <div id="camposSimples" class="hidden">
+                        <div class="form-group"><label>Nome completo</label><input id="nuNome" placeholder="Nome e sobrenome"></div>
+                        <div class="form-group"><label>CPF</label><input id="nuCpf" placeholder="000.000.000-00"></div>
+                        <div class="form-group"><label>E-mail</label><input id="nuEmail" type="email"></div>
+                        <div class="form-group"><label>WhatsApp</label><input id="nuWhats" placeholder="(11) 99999-9999"></div>
+                        <div class="form-group"><label>Endere\u00e7o (opcional)</label><input id="nuEnd" placeholder="Rua, n\u00famero, bairro"></div>
+                    </div>
+
+                    <button class="btn btn-add" onclick="salvarCadastroAdmin()">Cadastrar usu\u00e1rio / gerar contrato</button>
                 </div>
                 <h3 style="margin-top:16px;">Usu\u00e1rios (${db.users.length})</h3>
                 ${db.users.map(u=>`
                     <div class="item">
                         <div class="item-header"><span class="item-name">${u.nome}</span>${statusBadge(u.status)}</div>
                         <div class="item-small">${labels[u.tipo]||u.tipo} \u00b7 ${u.email}${u.cpf?' \u00b7 CPF '+u.cpf:''}</div>
-                        <div style="display:flex;gap:8px;margin-top:8px;">
+                        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
                             ${u.status==='pendente' ? `<button class="mini-btn mb-ok" onclick="aprovarResp('${u.id}')">Aprovar</button>` : ''}
+                            ${u.tipo==='responsavel' ? `<button class="mini-btn mb-add" onclick="imprimirContrato('${u.id}')">Imprimir contrato</button>` : ''}
                             <button class="mini-btn mb-danger" onclick="removerUsuario('${u.id}')">Remover</button>
                         </div></div>`).join('')}
                 <h3 style="margin-top:16px;">\ud83d\udd12 Prote\u00e7\u00e3o por PIN</h3>
@@ -627,23 +684,66 @@
                 </div>
             `;
         }
+        function togglePerfilCampos() {
+            const t = document.getElementById('nuTipo').value;
+            const resp = document.getElementById('camposResponsavel');
+            const simp = document.getElementById('camposSimples');
+            if (!resp || !simp) return;
+            resp.style.display = (t === 'responsavel') ? 'block' : 'none';
+            simp.style.display = (t === 'responsavel') ? 'none' : 'block';
+        }
         function salvarCadastroAdmin() {
+            const tipo = document.getElementById('nuTipo').value;
+            if (tipo === 'responsavel') { salvarCadastroResponsavel(); return; }
             const nome = document.getElementById('nuNome').value.trim();
             const cpf = document.getElementById('nuCpf').value.trim();
             const email = document.getElementById('nuEmail').value.trim().toLowerCase();
             const whats = document.getElementById('nuWhats').value.trim();
             const end = document.getElementById('nuEnd').value.trim();
-            const tipo = document.getElementById('nuTipo').value;
             if (!nome || !cpf || !email) { alert('Preencha nome, CPF e e-mail.'); return; }
             if (db.users.some(u=>u.email===email)) { alert('J\u00e1 existe usu\u00e1rio com esse e-mail.'); return; }
-            db.users.push({
-                id:'u_'+Date.now(), nome, cpf, email, whats, endereco:end,
-                tipo, senha:'1234', status:'aprovado', created_by:sessao.user_id, created_at:agora()
-            });
+            const novo = { id:'u_'+Date.now(), nome, cpf, email, whats, endereco:end, tipo, senha:'1234', status:'aprovado', created_by:sessao.user_id, created_at:agora() };
+            db.users.push(novo);
             if (tipo === 'motorista') {
-                db.drivers.push({ id:'d_'+Date.now(), user_id:db.users[db.users.length-1].id, cnh:'', veiculo_id:null });
+                db.drivers.push({ id:'d_'+Date.now(), user_id:novo.id, cnh:'', veiculo_id:null });
             }
             save(); alert('Usu\u00e1rio cadastrado e aprovado. Acesse com o e-mail informado e senha 1234.');
+            abaAdmin('usuarios');
+        }
+        function salvarCadastroResponsavel() {
+            const aluno = document.getElementById('rAluno').value.trim();
+            const resp = document.getElementById('rResp').value.trim();
+            const cpf = document.getElementById('rCpf').value.trim();
+            const email = document.getElementById('rEmail').value.trim().toLowerCase();
+            const whats = document.getElementById('rWhats').value.trim();
+            const escolaNome = document.getElementById('rEscola').value.trim();
+            const periodo = document.getElementById('rPeriodo').value;
+            const professor = document.getElementById('rProfessor').value.trim();
+            const valor = parseFloat(document.getElementById('rValor').value) || 0;
+            const quinzena = document.getElementById('rQuinzena').value;
+            const embarque = document.getElementById('rEmbarque').value.trim();
+            const entrega = document.getElementById('rEntrega').value.trim();
+            if (!aluno || !resp || !email) { alert('Preencha nome do aluno, nome do respons\u00e1vel e e-mail.'); return; }
+            if (db.users.some(u=>u.email===email)) { alert('J\u00e1 existe usu\u00e1rio com esse e-mail.'); return; }
+            const base = Date.now();
+            let escola = null;
+            if (escolaNome) escola = db.schools.find(s=>s.nome.toLowerCase()===escolaNome.toLowerCase());
+            if (!escola && escolaNome) { escola = { id:'e_'+base, nome:escolaNome, endereco:entrega, bairro:'' }; db.schools.push(escola); }
+            const escola_id = escola ? escola.id : null;
+            const uid = 'u_'+base;
+            db.users.push({ id:uid, nome:resp, cpf, email, whats, endereco:embarque, tipo:'responsavel', senha:'1234', status:'aprovado', created_by:sessao.user_id, created_at:agora() });
+            const sid = 's_'+base;
+            db.students.push({ id:sid, responsavel_id:uid, nome:aluno, escola_id, serie:'', periodo, professor, nascimento:'', necessidades:'', observacoes:'', ativo:true });
+            const rid = 'r_'+base;
+            const nomeRota = (escolaNome || 'Rota') + ' - ' + (periodo === 'manha' ? 'Manh\u00e3' : 'Tarde');
+            db.routes.push({ id:rid, nome:nomeRota, escola_id, driver_id:null, vehicle_id:null, turno:'ida_volta', hora_ida:'', hora_volta:'', bairro_origem:'', periodo, ativo:true, valor_mensal:valor });
+            db.route_stops.push({ id:'p_'+base+'_1', route_id:rid, ordem:1, endereco:embarque, bairro:'', tipo:'embarque' });
+            db.route_stops.push({ id:'p_'+base+'_2', route_id:rid, ordem:2, endereco:entrega || (escolaNome || 'Escola'), bairro:'', tipo:'escola' });
+            const cid = 'c_'+base;
+            db.contracts.push({ id:cid, responsavel_id:uid, student_id:sid, route_id:rid, turno:'ida_volta', valor_mensal:valor, status:'ativo', data_ativacao:agora(), vencimento_dia:(quinzena==='dia5'?5:20), quinzena });
+            ['ida','volta'].forEach(sh => db.enrollments.push({ id:'en_'+base+sh, contract_id:cid, route_id:rid, student_id:sid, shift:sh, ativo:true }));
+            save();
+            alert('Aluno cadastrado! Contrato ATIVO e rota criados automaticamente.\n\nAcesso do respons\u00e1vel: '+email+' / senha 1234');
             abaAdmin('usuarios');
         }
         function removerUsuario(uid) {
@@ -652,6 +752,90 @@
             if (!confirm('Remover usu\u00e1rio '+u.nome+'?')) return;
             db.users = db.users.filter(x=>x.id!==uid);
             save(); abaAdmin('usuarios');
+        }
+        function imprimirContrato(uid) {
+            const u = db.users.find(x=>x.id===uid); if (!u) return;
+            const aluno = db.students.find(s=>s.responsavel_id===uid);
+            const c = db.contracts.find(cc=>cc.responsavel_id===uid);
+            const r = c ? db.routes.find(x=>x.id===c.route_id) : null;
+            const escola = (aluno && aluno.escola_id) ? db.schools.find(s=>s.id===aluno.escola_id) : null;
+            const embarque = r ? ((db.route_stops.find(p=>p.route_id===r.id && p.tipo==='embarque')||{}).endereco||'-') : '-';
+            const entrega = r ? ((db.route_stops.find(p=>p.route_id===r.id && p.tipo==='escola')||{}).endereco||'-') : '-';
+            const periodo = aluno && aluno.periodo ? (aluno.periodo==='manha'?'Manh\u00e3':'Tarde') : '-';
+            const valor = c ? money(c.valor_mensal) : '-';
+            const quinzena = c ? (contractQuinzena(c)==='dia5' ? 'Dia 5 (1\u00aa Quinzena)' : 'Dia 20 (2\u00aa Quinzena)') : '-';
+            const html = `<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8">
+                <title>Contrato - ${aluno?aluno.nome:u.nome}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Arial, sans-serif; color:#222; margin: 30px; }
+                    .top { text-align:center; border-bottom:2px solid #0056b3; padding-bottom:10px; margin-bottom:18px; }
+                    .top img { height:90px; }
+                    h1 { color:#0056b3; font-size:18px; margin:8px 0 0; }
+                    h2 { font-size:15px; margin:20px 0 10px; color:#0056b3; }
+                    table { width:100%; border-collapse:collapse; font-size:13px; }
+                    td { padding:6px 4px; border-bottom:1px solid #eee; }
+                    td.k { color:#666; width:38%; }
+                    .termos { font-size:12px; line-height:1.6; text-align:justify; }
+                    .assin { margin-top:60px; display:flex; justify-content:space-between; gap:40px; }
+                    .assin div { border-top:1px solid #333; flex:1; text-align:center; padding-top:6px; font-size:12px; }
+                    @media print { .no-print { display:none; } body { margin:15mm; } }
+                </style></head><body>
+                <div class="top">
+                    <img src="logo.png" alt="Tia Mira Transportes">
+                    <h1>CONTRATO ANUAL DE TRANSPORTE ESCOLAR</h1>
+                </div>
+                <h2>Dados do aluno</h2>
+                <table>
+                    <tr><td class="k">Aluno(a)</td><td>${aluno?aluno.nome:'-'}</td></tr>
+                    <tr><td class="k">Escola</td><td>${escola?escola.nome:'-'}</td></tr>
+                    <tr><td class="k">Per\u00edodo</td><td>${periodo}</td></tr>
+                    <tr><td class="k">Professor(a)</td><td>${aluno&&aluno.professor?aluno.professor:'-'}</td></tr>
+                </table>
+                <h2>Dados do respons\u00e1vel</h2>
+                <table>
+                    <tr><td class="k">Nome</td><td>${u.nome}</td></tr>
+                    <tr><td class="k">CPF</td><td>${u.cpf||'-'}</td></tr>
+                    <tr><td class="k">WhatsApp</td><td>${u.whats||'-'}</td></tr>
+                </table>
+                <h2>Servi\u00e7o</h2>
+                <table>
+                    <tr><td class="k">Endere\u00e7o de embarque</td><td>${embarque}</td></tr>
+                    <tr><td class="k">Endere\u00e7o de entrega</td><td>${entrega}</td></tr>
+                    <tr><td class="k">Valor mensal</td><td><b>${valor}</b></td></tr>
+                    <tr><td class="k">Quinzena de cobran\u00e7a</td><td>${quinzena}</td></tr>
+                </table>
+                <h2>Termos e condi\u00e7\u00f5es</h2>
+                <div class="termos">
+                    <p style="text-align:center; font-weight:bold; margin-top:0;">Por favor, leia com aten\u00e7\u00e3o!</p>
+                    <p>S\u00e3o Paulo ______ de _____________________ de __________</p>
+                    <table style="border:none; margin-bottom:10px;"><tr>
+                        <td style="width:50%; border:none; text-align:center;">_______________________<br>Respons\u00e1vel</td>
+                        <td style="width:50%; border:none; text-align:center;">_______________________<br>De acordo</td>
+                    </tr></table>
+                    <ol>
+                        <li>As mensalidades pagas ap\u00f3s o vencimento ser\u00e1 cobrado multa de R$ 5,00 mais mora de 0,33% ao dia.</li>
+                        <li>As mensalidades ser\u00e3o reajustadas de acordo com os aumentos de combust\u00edvel.</li>
+                        <li>O m\u00eas de JULHO dever\u00e1 ser pago normalmente e o m\u00eas de JANEIRO deve ser pago junto com o m\u00eas de DEZEMBRO ou enviar cheque pr\u00e9-datado para o vencimento p/ JANEIRO.</li>
+                        <li>Os alunos que sa\u00edrem do Transporte Escolar durante o ano letivo deve efetuar o pagamento total referente ao m\u00eas que saiu, acrescido de uma mensalidade.</li>
+                        <li>As faltas e Licen\u00e7as ou greves n\u00e3o exoneram o pagamento da mensalidade.</li>
+                        <li>O aluno deve encontrar-se no lugar determinado, cinco minutos antes da passagem do Transporte Escolar.</li>
+                        <li>Este contrato tem dura\u00e7\u00e3o de 12 meses (de Fevereiro a Janeiro).</li>
+                        <li>O Transporte Escolar n\u00e3o se responsabiliza por hor\u00e1rios que n\u00e3o estejam determinados no contrato.</li>
+                        <li>\u00c9 obrigat\u00f3ria a devolu\u00e7\u00e3o da ficha de controle entregue mensalmente pelo condutor, com o pagamento, para ser assinado.</li>
+                    </ol>
+                    <p>S\u00e3o Paulo ______ de _____________________ de __________</p>
+                    <table style="border:none;"><tr>
+                        <td style="width:50%; border:none; text-align:center;">_______________________<br>Respons\u00e1vel</td>
+                        <td style="width:50%; border:none; text-align:center;">_______________________<br>De acordo</td>
+                    </tr></table>
+                </div>
+                <p class="no-print" style="margin-top:30px; text-align:center;">
+                    <button onclick="window.print()" style="padding:10px 20px; font-size:14px;">Imprimir</button>
+                </p>
+            </body></html>`;
+            const w = window.open('', '_blank');
+            if (w) { w.document.write(html); w.document.close(); }
+            else { alert('Permita pop-ups para imprimir o contrato.'); }
         }
         function adminContratos() {
             const contratos = db.contracts;
@@ -677,30 +861,138 @@
         function adminRotas() {
             return db.routes.map(r=>{
                 const v = db.vehicles.find(vv=>vv.id===r.vehicle_id);
+                const drv = db.drivers.find(d=>d.id===r.driver_id);
+                const motNome = drv ? userNome(drv.user_id) : 'Sem motorista';
                 const ocup = db.enrollments.filter(e=>e.route_id===r.id && e.ativo).length;
                 const vagas = (v?v.capacidade:0)-ocup;
                 const stops = db.route_stops.filter(st=>st.route_id===r.id).sort((a,b)=>a.ordem-b.ordem);
                 return `<div class="item">
                     <div class="item-header"><span class="item-name">${r.nome}</span><span class="rota-tag">${ocup}/${v?v.capacidade:'?'} vagas</span></div>
-                    <div class="item-small">${schoolNome(r.escola_id)} \u00b7 Ida ${r.hora_ida} \u00b7 Volta ${r.hora_volta} \u00b7 ${money(r.valor_mensal)}/aluno</div>
-                    <div class="item-small">Motorista: ${userNome(db.drivers.find(d=>d.id===r.driver_id).user_id)} \u00b7 ${v?v.modelo+' - '+v.placa:''}</div>
+                    <div class="item-small">${schoolNome(r.escola_id)} \u00b7 Ida ${r.hora_ida||'-'} \u00b7 Volta ${r.hora_volta||'-'} \u00b7 ${money(r.valor_mensal)}/aluno</div>
+                    <div class="item-small">Motorista: ${motNome} \u00b7 ${v?v.modelo+' - '+v.placa:'Sem ve\u00edculo'}</div>
                     <ul class="parada-list">${stops.map(s=>`<li><span class="parada-num">${s.ordem}</span>${s.endereco} <span style="font-size:11px;color:#888;">(${s.tipo})</span></li>`).join('')}</ul>
                 </div>`;
             }).join('');
         }
-        function adminFinanceiro() {
-            const recebido = db.payments.filter(p=>p.status==='pago').reduce((s,p)=>s+p.valor,0);
-            const pendente = db.payments.filter(p=>p.status!=='pago').reduce((s,p)=>s+p.valor,0);
-            const mensAtivo = db.contracts.filter(c=>c.status==='ativo').reduce((s,c)=>s+c.valor_mensal,0);
+        const CAT_DESPESA = ['Combust\u00edvel','Manuten\u00e7\u00e3o','Sal\u00e1rio','Seguro','Outros'];
+        function contractQuinzena(c) { return c.quinzena || ((c.vencimento_dia||5) <= 15 ? 'dia5' : 'dia20'); }
+        function recLinha(c) {
+            const pend = c.status !== 'ativo';
+            return `<div class="resumo-item">
+                <span>${studentNome(c.student_id)} <span class="exp-cat">\u00b7 ${userNome(c.responsavel_id)}</span></span>
+                <span style="white-space:nowrap;">${money(c.valor_mensal)} ${statusBadge(c.status)}
+                    ${pend ? `<button class="mini-btn mb-ok" onclick="baixarReceita('${c.id}')" style="margin-left:6px;">Dar baixa</button>` : ''}
+                </span></div>`;
+        }
+        function despLinha(e) {
+            const pend = e.status !== 'pago';
+            return `<div class="resumo-item">
+                <span>${e.descricao} <span class="exp-cat">\u00b7 ${e.categoria||'Outros'} \u00b7 ${e.data||''}</span></span>
+                <span style="white-space:nowrap;">${money(e.valor)} ${statusBadge(pend?'pendente':'pago')}
+                    ${pend ? `<button class="mini-btn mb-ok" onclick="baixarDespesa('${e.id}')" style="margin-left:6px;">Pagar</button>`
+                           : `<button class="mini-btn mb-warn" onclick="reabrirDespesa('${e.id}')" style="margin-left:6px;">Reabrir</button>`}
+                    <button class="mini-btn mb-danger" onclick="removerDespesa('${e.id}')" style="margin-left:4px;">x</button>
+                </span></div>`;
+        }
+        function quinzenaBloco(titulo, q) {
+            const recs = db.contracts.filter(c=>contractQuinzena(c)===q);
+            const desps = (db.expenses||[]).filter(e=>(e.quinzena||'dia5')===q);
+            const recTotal = recs.reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const recReceb = recs.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const despTotal = desps.reduce((s,e)=>s+Number(e.valor||0),0);
+            const despPago = desps.filter(e=>e.status==='pago').reduce((s,e)=>s+Number(e.valor||0),0);
+            const saldo = recReceb - despPago;
             return `
-                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                    <div class="stat-card" style="background:#28a745;"><h3>${money(recebido)}</h3><p>Recebido</p></div>
-                    <div class="stat-card" style="background:#fd7e14;"><h3>${money(pendente)}</h3><p>A receber (links)</p></div>
-                    <div class="stat-card" style="background:#0056b3;"><h3>${money(mensAtivo)}</h3><p>Mensalidades ativas/m\u00eas</p></div>
+                <div class="quinzena-title">${titulo}</div>
+                <div class="item" style="border-left:4px solid var(--success-green);">
+                    <div style="font-weight:bold;color:var(--success-green);margin-bottom:6px;">\ud83d\udcb0 Receitas</div>
+                    ${recs.length ? recs.map(recLinha).join('') : '<p class="empty-msg">Nenhuma receita.</p>'}
+                    <div class="resumo-item" style="font-weight:bold;border-top:1px solid #ddd;padding-top:8px;">
+                        <span>Total da quinzena</span><span style="color:var(--success-green);">${money(recTotal)}</span></div>
                 </div>
-                <h3>Links de pagamento</h3>
-                ${(db.payments||[]).length ? db.payments.map(p=>`<div class="item"><div class="item-header"><span class="item-name">${p.descricao||p.contract_id}</span>${statusBadge(p.status)}</div><div class="item-small">${money(p.valor)} \u00b7 ${p.forma} \u00b7 ${p.link_url}</div></div>`).join('') : '<p>Nenhum link gerado.</p>'}
+                <div class="item" style="border-left:4px solid var(--danger-red);">
+                    <div style="font-weight:bold;color:var(--danger-red);margin-bottom:6px;">\ud83d\udccb Despesas</div>
+                    ${desps.length ? desps.map(despLinha).join('') : '<p class="empty-msg">Nenhuma despesa.</p>'}
+                    <div class="resumo-item" style="font-weight:bold;border-top:1px solid #ddd;padding-top:8px;">
+                        <span>Total da quinzena</span><span style="color:var(--danger-red);">${money(despTotal)}</span></div>
+                </div>
+                <div class="fin-hero" style="background:${saldo>=0?'var(--success-green)':'var(--danger-red)'};">
+                    <h3>${money(saldo)}</h3><p>Saldo da quinzena (recebido - pago)</p></div>
             `;
+        }
+        function adminFinanceiro() {
+            db.expenses = db.expenses || [];
+            const contratos = db.contracts;
+            const recReceb = contratos.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const recPend = contratos.filter(c=>c.status!=='ativo' && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const despPago = db.expenses.filter(e=>e.status==='pago').reduce((s,e)=>s+Number(e.valor||0),0);
+            const despPend = db.expenses.filter(e=>e.status!=='pago').reduce((s,e)=>s+Number(e.valor||0),0);
+            const saldo = recReceb - despPago;
+            const saldoPrev = (recReceb+recPend) - (despPago+despPend);
+            const catOpts = CAT_DESPESA.map(c=>`<option value="${c}">${c}</option>`).join('');
+            return `
+                <div class="fin-hero" style="background:${saldo>=0?'var(--success-green)':'var(--danger-red)'};">
+                    <h3>${money(saldo)}</h3><p>Saldo realizado (recebido - despesas pagas)</p></div>
+                <div class="fin-grid">
+                    <div class="fin-card"><div class="t">Receitas recebidas</div><div class="v g">${money(recReceb)}</div></div>
+                    <div class="fin-card"><div class="t">Receitas a receber</div><div class="v o">${money(recPend)}</div></div>
+                    <div class="fin-card"><div class="t">Despesas pagas</div><div class="v r">${money(despPago)}</div></div>
+                    <div class="fin-card"><div class="t">Despesas a pagar</div><div class="v r">${money(despPend)}</div></div>
+                </div>
+                <div class="fin-card" style="margin-bottom:12px;"><div class="t">Saldo previsto (tudo)</div><div class="v" style="color:#0056b3;">${money(saldoPrev)}</div></div>
+
+                <div class="quinzena-title">\u2795 Nova despesa</div>
+                <div class="item" style="border-style:dashed;">
+                    <div class="form-group"><label>Descri\u00e7\u00e3o</label><input id="exDesc" placeholder="Ex: Combust\u00edvel da van"></div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Categoria</label><select id="exCat">${catOpts}</select></div>
+                        <div class="form-group"><label>Valor (R$)</label><input id="exValor" type="number" min="0" step="0.01" placeholder="0,00"></div>
+                    </div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Data</label><input id="exData" type="date" value="${hoje()}"></div>
+                        <div class="form-group"><label>Quinzena</label><select id="exQuinzena"><option value="dia5">Dia 5 (1\u00aa Quinzena)</option><option value="dia20">Dia 20 (2\u00aa Quinzena)</option></select></div>
+                    </div>
+                    <div class="form-group"><label>Situa\u00e7\u00e3o</label><select id="exStatus"><option value="pendente">A pagar</option><option value="pago">J\u00e1 pago</option></select></div>
+                    <button class="btn btn-add" onclick="adicionarDespesa()">Adicionar despesa</button>
+                </div>
+
+                ${quinzenaBloco('\ud83d\udcc5 1\u00aa Quinzena (Dia 5)', 'dia5')}
+                ${quinzenaBloco('\ud83d\udcc5 2\u00aa Quinzena (Dia 20)', 'dia20')}
+            `;
+        }
+        function adicionarDespesa() {
+            const desc = document.getElementById('exDesc').value.trim();
+            const valor = parseFloat(document.getElementById('exValor').value) || 0;
+            if (!desc || valor <= 0) { alert('Informe a descri\u00e7\u00e3o e o valor da despesa.'); return; }
+            db.expenses.push({
+                id:'x_'+Date.now(), descricao:desc,
+                categoria:document.getElementById('exCat').value,
+                valor,
+                data:document.getElementById('exData').value || hoje(),
+                quinzena:document.getElementById('exQuinzena').value,
+                status:document.getElementById('exStatus').value,
+                created_at:agora()
+            });
+            save(); abaAdmin('financeiro');
+        }
+        function baixarDespesa(id) {
+            const e = db.expenses.find(x=>x.id===id); if (!e) return;
+            e.status='pago'; e.pago_em=agora(); save(); abaAdmin('financeiro');
+        }
+        function reabrirDespesa(id) {
+            const e = db.expenses.find(x=>x.id===id); if (!e) return;
+            e.status='pendente'; delete e.pago_em; save(); abaAdmin('financeiro');
+        }
+        function removerDespesa(id) {
+            if (!confirm('Remover esta despesa?')) return;
+            db.expenses = db.expenses.filter(x=>x.id!==id); save(); abaAdmin('financeiro');
+        }
+        function baixarReceita(cid) {
+            const c = db.contracts.find(x=>x.id===cid); if (!c) return;
+            c.status='ativo'; c.paid_at=agora(); c.data_ativacao=agora();
+            const shifts = c.turno==='ida_volta' ? ['ida','volta'] : [c.turno];
+            shifts.forEach(sh => { if (!db.enrollments.some(e=>e.contract_id===cid && e.shift===sh)) db.enrollments.push({ id:'en_'+Date.now()+sh, contract_id:cid, route_id:c.route_id, student_id:c.student_id, shift:sh, ativo:true }); });
+            save(); abaAdmin('financeiro');
         }
 
         // ================= RENDER =================
