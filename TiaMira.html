@@ -247,7 +247,7 @@
             if (!u) { alert('Nenhum usu\u00e1rio dispon\u00edvel para esse perfil.'); return; }
             sessao.user_id = u.id; render();
         }
-        function logout() { sessao.user_id = null; db.trip_active = null; save(); render(); }
+        function logout() { pararGPS(); sessao.user_id = null; db.trip_active = null; save(); render(); }
 
         
 
@@ -502,25 +502,76 @@
             const r = db.routes.find(x=>x.id===t.route_id);
             return `<div class="item">
                 <div class="item-header"><span class="item-name">${t.tipo.toUpperCase()} \u00b7 ${r.nome}</span>${statusBadge(t.status)}</div>
-                <div class="item-small">${t.hora||r.hora_id} \u00b7 ${(t.students||[]).length} aluno(s)</div>
-                ${t.status==='agendado' ? '<button class="mini-btn mb-add" onclick="iniciarTrip(\''+t.id+'\')">Iniciar viagem (ativa GPS + acompanhamento)</button>' : ''}
+                <div class="item-small">${t.hora||r.hora_ida} \u00b7 ${(t.students||[]).length} aluno(s)${(t.km_percorrido ? ' \u00b7 '+String(t.km_percorrido).replace('.',',')+' km' : '')}</div>
+                ${t.status==='agendado' ? '<button class="mini-btn mb-add" onclick="iniciarTrip(\''+t.id+'\')">Iniciar percurso (liga GPS)</button>' : ''}
                 ${t.status==='iniciado' ? '<button class="mini-btn mb-warn" onclick="iniciarTrip(\''+t.id+'\')">Marcar em andamento</button>' : ''}
-                ${t.status==='em_andamento' ? '<button class="mini-btn mb-ok" onclick="finalizarTrip(\''+t.id+'\')">Finalizar viagem</button>' : ''}
+                ${t.status==='em_andamento' ? '<button class="mini-btn mb-ok" onclick="finalizarTrip(\''+t.id+'\')">Finalizar percurso</button>' : ''}
                 ${(t.status==='iniciado'||t.status==='em_andamento') ? '<button class="mini-btn mb-add" onclick="abrirPresenca(\''+t.id+'\')">Lista de presen\u00e7a</button>' : ''}
+                ${(t.status==='finalizado' && t.km_percorrido) ? '<div class="item-small" style="color:#28a745;font-weight:bold;margin-top:4px;">Percurso finalizado: '+String(t.km_percorrido).replace('.',',')+' km'+(t.percurso_fim?' \u00b7 '+t.percurso_fim:'')+'</div>' : ''}
+                <div id="percursoLive${t.id}">${percursoLiveHtml(t)}</div>
                 <div id="presenca${t.id}"></div>
             </div>`;
+        }
+        function percursoLiveHtml(t) {
+            if (t.status!=='em_andamento') return '';
+            return '<div class="item-small" style="margin-top:4px;color:#0056b3;">KM percorrido: <b>'+String(t.km_percorrido||0).replace('.',',')+' km</b> \u00b7 '+((t.trajeto||[]).length)+' ponto(s)'+(t.percurso_inicio?' \u00b7 in\u00edcio '+t.percurso_inicio:'')+'</div>';
+        }
+        function atualizarLive(tid) {
+            const el = document.getElementById('percursoLive'+tid); if (!el) return;
+            const t = db.trips.find(x=>x.id===tid); if (!t) return;
+            el.innerHTML = percursoLiveHtml(t);
+        }
+        function haversineKm(a, b) {
+            const R = 6371;
+            const dLat = (b[0]-a[0]) * Math.PI/180;
+            const dLon = (b[1]-a[1]) * Math.PI/180;
+            const la1 = a[0]*Math.PI/180, la2 = b[0]*Math.PI/180;
+            const h = Math.pow(Math.sin(dLat/2),2) + Math.cos(la1)*Math.cos(la2)*Math.pow(Math.sin(dLon/2),2);
+            return R * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+        }
+        let _gpsWatch = null, _gpsTrip = null, _gpsLast = null;
+        function iniciarGPS(tid) {
+            if (typeof navigator === 'undefined' || !navigator.geolocation) {
+                const el = document.getElementById('percursoLive'+tid);
+                if (el) el.innerHTML = '<div class="item-small" style="color:#fd7e14;">GPS indispon\u00edvel neste dispositivo. Abra em um celular com localiza\u00e7\u00e3o ativada.</div>';
+                return;
+            }
+            if (_gpsWatch !== null) return;
+            _gpsTrip = tid; _gpsLast = null;
+            const t = db.trips.find(x=>x.id===tid); if (t) { t.trajeto = t.trajeto || []; if (t.km_percorrido==null) t.km_percorrido = 0; }
+            _gpsWatch = navigator.geolocation.watchPosition(function(pos){
+                const p = [pos.coords.latitude, pos.coords.longitude];
+                const tt = db.trips.find(x=>x.id===tid); if (!tt) return;
+                if (_gpsLast) {
+                    const d = haversineKm(_gpsLast, p);
+                    if (d >= 0.005) { tt.km_percorrido = Math.round(((tt.km_percorrido||0)+d)*100)/100; tt.trajeto.push(p); _gpsLast = p; save(); atualizarLive(tid); }
+                } else {
+                    tt.km_inicio = p; tt.trajeto = [p]; _gpsLast = p; save(); atualizarLive(tid);
+                }
+            }, function(err){
+                const el = document.getElementById('percursoLive'+tid);
+                const msg = (err && err.code===1) ? 'Permiss\u00e3o de localiza\u00e7\u00e3o negada.' : 'N\u00e3o foi poss\u00edvel ler o GPS.';
+                if (el) el.innerHTML = '<div class="item-small" style="color:#dc3545;">'+msg+' Habilite a localiza\u00e7\u00e3o e tente novamente.</div>';
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+        }
+        function pararGPS() {
+            if (_gpsWatch !== null && typeof navigator!=='undefined' && navigator.geolocation) { try { navigator.geolocation.clearWatch(_gpsWatch); } catch(e){} }
+            _gpsWatch = null; _gpsTrip = null; _gpsLast = null;
         }
         function iniciarTrip(tid) {
             const t = db.trips.find(x=>x.id===tid); if (!t) return;
             if (t.status==='agendado') { t.status='iniciado'; t.iniciado_em=agora(); }
-            else if (t.status==='iniciado') { t.status='em_andamento'; }
-            db.trip_active = tid; save(); render();
+            else if (t.status==='iniciado') { t.status='em_andamento'; t.percurso_inicio = t.percurso_inicio || agora(); if (t.km_percorrido==null) t.km_percorrido = 0; if (!t.trajeto) t.trajeto = []; }
+            db.trip_active = tid; save();
+            render();
+            if (t.status==='em_andamento') iniciarGPS(tid);
         }
         function finalizarTrip(tid) {
             const t = db.trips.find(x=>x.id===tid); if (!t) return;
-            t.status='finalizado'; t.finalizado_em=agora();
+            pararGPS();
+            t.status='finalizado'; t.finalizado_em=agora(); t.percurso_fim=t.percurso_fim||agora();
             if (db.trip_active===tid) db.trip_active=null;
-            save(); alert('Viagem finalizada. GPS desativado.'); render();
+            save(); alert('Percurso finalizado.\nKM percorrido: '+String(t.km_percorrido||0).replace('.',',')+' km'); render();
         }
         function abrirPresenca(tid) {
             const t = db.trips.find(x=>x.id===tid); if (!t) return;
@@ -564,6 +615,7 @@
             const recPend = db.contracts.filter(c=>!c.pago && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status!=='pago').reduce((s,r)=>s+Number(r.valor||0),0);
             const alunosAtivos = db.students.filter(s=>s.ativo && db.contracts.some(c=>c.student_id===s.id && c.status!=='cancelado'));
             const kmTotal = db.routes.filter(r=>r.ativo).reduce((s,r)=>s+Number(r.distancia_km||0),0);
+            const kmRodado = db.trips.reduce((s,t)=>s+Number(t.km_percorrido||0),0);
             return `
                 <div class="aviso-topo">Painel administrativo - ${u.nome}</div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
@@ -575,6 +627,7 @@
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <div class="stat-card"><h3>${alunosAtivos.length}</h3><p>Alunos matriculados</p></div>
                     <div class="stat-card" style="background:#555;"><h3>${String(kmTotal).replace('.', ',')} km</h3><p>KM total dos percursos</p></div>
+                    <div class="stat-card" style="background:#0d6efd;"><h3>${String(Math.round(kmRodado*10)/10).replace('.', ',')} km</h3><p>KM rodado (percurso real)</p></div>
                 </div>
                 <div class="tabs">
                     <div class="tab active" id="ad1" onclick="abaAdmin('usuarios')">Usuários</div>
@@ -774,12 +827,12 @@
             const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
             const timer = setTimeout(()=>{ if (ctrl) ctrl.abort(); }, ms || 8000);
             return fetch(url, ctrl ? { signal: ctrl.signal } : undefined)
-                .then(r => r.json())
+                .then(r => { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
                 .then(j => { clearTimeout(timer); return j; }, e => { clearTimeout(timer); throw e; });
         }
         function nCoord(a) { return (a && a[0]) ? [parseFloat(a[0].lon), parseFloat(a[0].lat)] : null; }
         function geocodeAddr(q) {
-            const photon = 'https://photon.komoot.io/api/?limit=1&lang=pt&q='+encodeURIComponent(q);
+            const photon = 'https://photon.komoot.io/api/?limit=1&q='+encodeURIComponent(q);
             const nominatim = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q='+encodeURIComponent(q);
             return fetchJson(photon).then(js=>{
                 if (js && js.features && js.features[0]) { const co = js.features[0].geometry.coordinates; return [co[0], co[1]]; }
