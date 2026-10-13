@@ -135,49 +135,16 @@
 
         const seed = {
             users: [
-                { id:'u_admin', nome:'Admin Tia Mira', email:'zemirafaustino@gmail.com', senha:'', tipo:'admin', status:'aprovado' },
-                { id:'u_resp', nome:'Fernanda Rocha', email:'fernanda@email.com', senha:'123', cpf:'111.222.333-44', tipo:'responsavel', status:'aprovado', telefone_emergencia:'(11) 98888-0000' },
-                { id:'u_resp2', nome:'Roberto Dias', email:'roberto@email.com', senha:'123', cpf:'555.666.777-88', tipo:'responsavel', status:'aprovado' },
-                { id:'u_pend', nome:'Mariana Nunes', email:'mariana@email.com', senha:'123', cpf:'999.888.777-66', tipo:'responsavel', status:'pendente', telefone_emergencia:'(11) 97777-1111' },
-                { id:'u_mot', nome:'Toninho Martins', email:'toninho@email.com', senha:'123', tipo:'motorista', status:'aprovado', ativo:true },
-                { id:'u_mot2', nome:'Carlos Andrade', email:'carlos@email.com', senha:'123', tipo:'motorista', status:'aprovado', ativo:true }
+                { id:'u_admin', nome:'Admin Tia Mira', email:'zemirafaustino@gmail.com', senha:'', tipo:'admin', status:'aprovado' }
             ],
-            students: [
-                { id:'s1', responsavel_id:'u_resp', nome:'Lucas Rocha', nascimento:'2014-03-12', escola_id:'e1', serie:'5\u00ba Ano', necessidades:'', observacoes:'', ativo:true },
-                { id:'s2', responsavel_id:'u_resp', nome:'Laura Rocha', nascimento:'2017-07-25', escola_id:'e1', serie:'2\u00ba Ano', necessidades:'Cadeirinha', observacoes:'', ativo:true },
-                { id:'s3', responsavel_id:'u_resp2', nome:'Pedro Dias', nascimento:'2013-11-02', escola_id:'e2', serie:'7\u00ba Ano', necessidades:'', observacoes:'', ativo:true }
-            ],
-            schools: [
-                { id:'e1', nome:'Col\u00e9gio Alpha', endereco:'Av. Brasil, 1000', bairro:'Centro' },
-                { id:'e2', nome:'Escola Estadual XYZ', endereco:'Rua das Palmeiras, 500', bairro:'Jardim' }
-            ],
-            drivers: [
-                { id:'d1', user_id:'u_mot', cnh:'123456789', veiculo_id:'v1' },
-                { id:'d2', user_id:'u_mot2', cnh:'987654321', veiculo_id:'v2' }
-            ],
-            vehicles: [
-                { id:'v1', motorista_id:'d1', placa:'KID1A23', modelo:'Fiat Ducato', cor:'Branco', capacidade:12, tipo:'van', ativo:true },
-                { id:'v2', motorista_id:'d2', placa:'KID4B56', modelo:'Volkswagen Kombi', cor:'Azul', capacidade:10, tipo:'van', ativo:true }
-            ],
-            routes: [
-                { id:'rta', nome:'Jardim das Flores -> Col\u00e9gio Alpha', escola_id:'e1', driver_id:'d1', vehicle_id:'v1', turno:'ida_volta', hora_ida:'06:40', hora_volta:'12:30', bairro_origem:'Jardim das Flores', ativo:true, valor_mensal:110 },
-                { id:'rtb', nome:'Vila Nova -> Escola Estadual XYZ', escola_id:'e2', driver_id:'d2', vehicle_id:'v2', turno:'ida_volta', hora_ida:'06:50', hora_volta:'11:50', bairro_origem:'Vila Nova', ativo:true, valor_mensal:95 }
-            ],
-            route_stops: [
-                { id:'p1', route_id:'rta', ordem:1, endereco:'Rua Ac\u00e1cias, 200', bairro:'Jardim das Flores', tipo:'embarque' },
-                { id:'p2', route_id:'rta', ordem:2, endereco:'Av. das Hort\u00eansias, 340', bairro:'Jardim das Flores', tipo:'embarque' },
-                { id:'p3', route_id:'rta', ordem:3, endereco:'Col\u00e9gio Alpha - Av. Brasil, 1000', bairro:'Centro', tipo:'escola' },
-                { id:'p4', route_id:'rtb', ordem:1, endereco:'Rua das Palmeiras, 120', bairro:'Vila Nova', tipo:'embarque' },
-                { id:'p5', route_id:'rtb', ordem:2, endereco:'Escola Estadual XYZ - Rua das Palmeiras, 500', bairro:'Jardim', tipo:'escola' }
-            ],
-            contracts: [
-                { id:'c1', responsavel_id:'u_resp', student_id:'s1', route_id:'rta', turno:'ida_volta', valor_mensal:110, status:'ativo', data_ativacao:'2026-10-01', paid_at:'2026-10-01', vencimento_dia:5 },
-                { id:'c2', responsavel_id:'u_resp', student_id:'s2', route_id:'rta', turno:'ida', valor_mensal:90, status:'pendente_pagamento', vencimento_dia:5 }
-            ],
-            enrollments: [
-                { id:'en1', contract_id:'c1', route_id:'rta', student_id:'s1', shift:'ida', ativo:true },
-                { id:'en2', contract_id:'c1', route_id:'rta', student_id:'s1', shift:'volta', ativo:true }
-            ],
+            students: [],
+            schools: [],
+            drivers: [],
+            vehicles: [],
+            routes: [],
+            route_stops: [],
+            contracts: [],
+            enrollments: [],
             trips: [],
             payments: [],
             expenses: [],
@@ -193,6 +160,21 @@
                     const d = JSON.parse(raw);
                     if (!d.expenses) d.expenses = [];
                     if (!d.revenues) d.revenues = [];
+                    if (Array.isArray(d.contracts)) d.contracts.forEach(c => { if (c.pago === undefined) c.pago = !!c.paid_at; });
+                    if (!d._exemplosRemovidos) {
+                        const EX = { users:['u_resp','u_resp2','u_pend','u_mot','u_mot2'],
+                                     students:['s1','s2','s3'],
+                                     schools:['e1','e2'],
+                                     drivers:['d1','d2'],
+                                     vehicles:['v1','v2'],
+                                     routes:['rta','rtb'],
+                                     route_stops:['p1','p2','p3','p4','p5'],
+                                     contracts:['c1','c2'],
+                                     enrollments:['en1','en2'] };
+                        Object.keys(EX).forEach(k => { if (Array.isArray(d[k])) d[k] = d[k].filter(x => !EX[k].includes(x.id)); });
+                        if (Array.isArray(d.enrollments)) d.enrollments = d.enrollments.filter(e => !EX.routes.includes(e.route_id) && !EX.contracts.includes(e.contract_id) && !EX.students.includes(e.student_id));
+                        d._exemplosRemovidos = true;
+                    }
                     if (Array.isArray(d.users)) {
                         d.users.forEach(u => {
                             if (u.email && u.email.toLowerCase() === 'admin@tiamira.com.br') { u.email = 'zemirafaustino@gmail.com'; u.senha = ''; }
@@ -394,7 +376,7 @@
             // controle de vagas no momento da contratação
             const v = db.vehicles.find(vv=>vv.id===r.vehicle_id);
             const ocup = db.enrollments.filter(e=>e.route_id===rid && e.ativo).length;
-            if (ocup >= v.capacidade) { alert('Lota\u00e7\u00e3o atingida. N\u00e3o \u00e9 poss\u00edvel contratar.'); return; }
+            if (v && ocup >= v.capacidade) { alert('Lota\u00e7\u00e3o atingida. N\u00e3o \u00e9 poss\u00edvel contratar.'); return; }
             // evita duplicidade do mesmo aluno na mesma rota+turno
             const dup = db.contracts.some(c => c.responsavel_id===u.id && c.student_id===sid && c.route_id===rid && c.status!=='cancelado');
             if (dup) { alert('Este aluno j\u00e1 possui contrato nesta rota.'); return; }
@@ -566,14 +548,14 @@
         // ================= ADMIN =================
         function adminView(u) {
             const rotasAtivas = db.routes.filter(r=>r.ativo);
-            const recPago = db.contracts.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
-            const recPend = db.contracts.filter(c=>c.status!=='ativo' && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status!=='pago').reduce((s,r)=>s+Number(r.valor||0),0);
+            const recPago = db.contracts.filter(c=>c.pago).reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
+            const recPend = db.contracts.filter(c=>!c.pago && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status!=='pago').reduce((s,r)=>s+Number(r.valor||0),0);
             const alunosAtivos = db.students.filter(s=>s.ativo);
             const kmTotal = db.routes.filter(r=>r.ativo).reduce((s,r)=>s+Number(r.distancia_km||0),0);
             return `
                 <div class="aviso-topo">Painel administrativo - ${u.nome}</div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                    <div class="stat-card"><h3>${db.users.length}</h3><p>Usu\u00e1rios</p></div>
+                    <div class="stat-card"><h3>${db.users.filter(u=>u.tipo!=='admin').length}</h3><p>Usu\u00e1rios</p></div>
                     <div class="stat-card"><h3>${rotasAtivas.length}</h3><p>Rotas ativas</p></div>
                     <div class="stat-card" style="background:#28a745;"><h3>${money(recPago)}</h3><p>Pagas</p></div>
                     <div class="stat-card" style="background:#fd7e14;"><h3>${money(recPend)}</h3><p>Pendentes</p></div>
@@ -677,8 +659,8 @@
 
                     <button class="btn btn-add" id="btnCadastro" onclick="salvarCadastroAdmin()">Cadastrar usu\u00e1rio / gerar contrato</button>
                 </div>
-                <h3 style="margin-top:16px;">Usu\u00e1rios (${db.users.length})</h3>
-                ${db.users.map(u=>`
+                <h3 style="margin-top:16px;">Usu\u00e1rios (${db.users.filter(u=>u.tipo!=='admin').length})</h3>
+                ${db.users.filter(u=>u.tipo!=='admin').map(u=>`
                     <div class="item">
                         <div class="item-header"><span class="item-name">${u.nome}</span>${statusBadge(u.status)}</div>
                         <div class="item-small">${labels[u.tipo]||u.tipo} \u00b7 ${u.email}${u.cpf?' \u00b7 CPF '+u.cpf:''}</div>
@@ -770,44 +752,58 @@
             db.route_stops.push({ id:'p_'+base+'_1', route_id:rid, ordem:1, endereco:embarque, bairro:'', tipo:'embarque' });
             db.route_stops.push({ id:'p_'+base+'_2', route_id:rid, ordem:2, endereco:entrega || (escolaNome || 'Escola'), bairro:'', tipo:'escola' });
             const cid = 'c_'+base;
-            db.contracts.push({ id:cid, responsavel_id:uid, student_id:sid, route_id:rid, turno:'ida_volta', valor_mensal:valor, status:'ativo', data_ativacao:agora(), vencimento_dia:(quinzena==='dia5'?5:20), quinzena });
+            db.contracts.push({ id:cid, responsavel_id:uid, student_id:sid, route_id:rid, turno:'ida_volta', valor_mensal:valor, status:'ativo', pago:false, data_ativacao:agora(), vencimento_dia:(quinzena==='dia5'?5:20), quinzena });
             ['ida','volta'].forEach(sh => db.enrollments.push({ id:'en_'+base+sh, contract_id:cid, route_id:rid, student_id:sid, shift:sh, ativo:true }));
             save();
             alert('Aluno cadastrado! Contrato ATIVO e rota criados automaticamente.\n\nAcesso do respons\u00e1vel: '+email+' / senha 1234');
             abaAdmin('usuarios');
         }
         function geocodeAddr(q) {
-            return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q='+encodeURIComponent(q))
-                .then(r=>r.json())
-                .then(a=>{ if (a && a[0]) return [parseFloat(a[0].lon), parseFloat(a[0].lat)]; return null; })
-                .catch(()=>null);
+            const photon = 'https://photon.komoot.io/api/?limit=1&lang=pt&q='+encodeURIComponent(q);
+            const nominatim = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q='+encodeURIComponent(q);
+            return fetch(photon).then(r=>r.json()).then(js=>{
+                if (js && js.features && js.features[0]) { const co = js.features[0].geometry.coordinates; return [co[0], co[1]]; }
+                return fetch(nominatim).then(r=>r.json()).then(a=>{ if (a && a[0]) return [parseFloat(a[0].lon), parseFloat(a[0].lat)]; return null; });
+            }).catch(()=> fetch(nominatim).then(r=>r.json()).then(a=>{ if (a && a[0]) return [parseFloat(a[0].lon), parseFloat(a[0].lat)]; return null; }).catch(()=>null));
+        }
+        function osrmDistance(c1, c2) {
+            const coords = c1.join(',')+';'+c2.join(',');
+            const servers = [
+                'https://router.project-osrm.org/route/v1/driving/'+coords+'?overview=false',
+                'https://routing.openstreetmap.de/routed-car/route/v1/driving/'+coords+'?overview=false'
+            ];
+            const parse = js => (js && js.routes && js.routes[0]) ? js.routes[0].distance : null;
+            return fetch(servers[0]).then(r=>r.json()).then(parse).catch(()=>null)
+                .then(d => d || fetch(servers[1]).then(r=>r.json()).then(parse).catch(()=>null));
         }
         let _kmTimer = null;
-        function autoCalcKm() {
-            const a = document.getElementById('rEmbarque').value.trim();
-            const b = document.getElementById('rEntrega').value.trim();
+        function autoCalcKm(aId, bId, outId) {
+            aId = aId || 'rEmbarque'; bId = bId || 'rEntrega'; outId = outId || 'rKm';
+            const aEl = document.getElementById(aId), bEl = document.getElementById(bId);
+            if (!aEl || !bEl) return;
+            const a = aEl.value.trim(), b = bEl.value.trim();
             if (!a || !b || a.length < 5 || b.length < 5) return;
             if (_kmTimer) clearTimeout(_kmTimer);
-            _kmTimer = setTimeout(()=>calcKmRota(true), 800);
+            _kmTimer = setTimeout(()=>calcKmRota(true, aId, bId, outId), 800);
         }
-        function calcKmRota(silent) {
+        function calcKmRota(silent, aId, bId, outId) {
+            aId = aId || 'rEmbarque'; bId = bId || 'rEntrega'; outId = outId || 'rKm';
             if (typeof fetch !== 'function') { if (!silent) alert('Seu navegador n\u00e3o suporta o c\u00e1lculo autom\u00e1tico. Digite o KM manualmente.'); return; }
-            const a = document.getElementById('rEmbarque').value.trim();
-            const b = document.getElementById('rEntrega').value.trim();
-            const out = document.getElementById('rKm');
+            const aEl = document.getElementById(aId), bEl = document.getElementById(bId), out = document.getElementById(outId);
+            if (!aEl || !bEl || !out) return;
+            const a = aEl.value.trim(), b = bEl.value.trim();
             if (!a || !b) { if (!silent) alert('Preencha os endere\u00e7os de embarque e entrega primeiro.'); return; }
-            out.value = '...';
+            out.placeholder = 'Calculando...';
             Promise.all([geocodeAddr(a), geocodeAddr(b)])
                 .then(res => {
                     if (!res[0] || !res[1]) { out.value=''; if (!silent) alert('N\u00e3o foi poss\u00edvel localizar os endere\u00e7os. Digite o KM manualmente.'); return null; }
-                    return fetch('https://router.project-osrm.org/route/v1/driving/'+res[0].join(',')+';'+res[1].join(',')+'?overview=false').then(r=>r.json());
+                    return osrmDistance(res[0], res[1]);
                 })
-                .then(js => {
-                    if (js && js.routes && js.routes[0]) {
-                        out.value = Math.max(1, Math.round(js.routes[0].distance/1000*10)/10);
-                    } else if (out.value !== '') { out.value=''; if (!silent) alert('N\u00e3o foi poss\u00edvel calcular percurso. Digite o KM manualmente.'); }
+                .then(dist => {
+                    if (dist) { out.value = Math.max(1, Math.round(dist/1000*10)/10); out.placeholder=''; }
+                    else { out.value=''; if (!silent) alert('N\u00e3o foi poss\u00edvel calcular o percurso. Digite o KM manualmente.'); }
                 })
-                .catch(()=>{ if (out.value === '...') out.value=''; if (!silent) alert('Sem internet ou servi\u00e7o indispon\u00edvel. Digite o KM manualmente.'); });
+                .catch(()=>{ out.value=''; if (!silent) alert('Sem internet ou servi\u00e7o indispon\u00edvel. Digite o KM manualmente.'); });
         }
         function salvarMeuAcesso() {
             const u = userAtual(); if (!u) return;
@@ -829,7 +825,22 @@
         function removerUsuario(uid) {
             const u = db.users.find(x=>x.id===uid); if(!u) return;
             if (u.id === sessao.user_id) { alert('Voc\u00ea n\u00e3o pode remover a si mesmo.'); return; }
-            if (!confirm('Remover usu\u00e1rio '+u.nome+'?')) return;
+            if (u.tipo === 'admin') { alert('A conta administrativa n\u00e3o pode ser removida.'); return; }
+            if (!confirm('Remover usu\u00e1rio '+u.nome+'? O contrato, a matr\u00edcula e a rota vinculados tamb\u00e9m ser\u00e3o removidos.')) return;
+            const meusAlunos = db.students.filter(s=>s.responsavel_id===uid).map(s=>s.id);
+            const meusContratos = db.contracts.filter(c=>c.responsavel_id===uid || meusAlunos.includes(c.student_id));
+            const cids = meusContratos.map(c=>c.id);
+            const rids = [...new Set(meusContratos.map(c=>c.route_id).filter(Boolean))];
+            db.contracts = db.contracts.filter(c=>!cids.includes(c.id));
+            db.enrollments = db.enrollments.filter(e=>!cids.includes(e.contract_id) && !meusAlunos.includes(e.student_id));
+            db.students = db.students.filter(s=>s.responsavel_id!==uid);
+            rids.forEach(rid=>{
+                if (!db.contracts.some(c=>c.route_id===rid) && !db.enrollments.some(e=>e.route_id===rid)) {
+                    db.route_stops = db.route_stops.filter(p=>p.route_id!==rid);
+                    db.routes = db.routes.filter(r=>r.id!==rid);
+                }
+            });
+            if (u.tipo === 'motorista') db.drivers = db.drivers.filter(d=>d.user_id!==uid);
             db.users = db.users.filter(x=>x.id!==uid);
             save(); abaAdmin('usuarios');
         }
@@ -842,6 +853,13 @@
                 if (s) c = db.contracts.find(x=>x.student_id===s.id);
             }
             const escolaNome = (isResp && s && s.escola_id) ? ((db.schools.find(e=>e.id===s.escola_id)||{}).nome||'') : '';
+            let rRota = null, vEmbarque = '', vEntrega = '';
+            if (isResp && c) {
+                rRota = db.routes.find(x=>x.id===c.route_id);
+                const st = db.route_stops.filter(p=>p.route_id===c.route_id);
+                vEmbarque = (st.find(p=>p.tipo==='embarque')||{}).endereco || u.endereco || '';
+                vEntrega = (st.find(p=>p.tipo==='escola')||{}).endereco || '';
+            }
             const box = document.getElementById('editBox');
             if (!box) return;
             box.innerHTML = `
@@ -870,6 +888,9 @@
                                 <option value="dia5" ${!c||contractQuinzena(c)==='dia5'?'selected':''}>Dia 5 (1\u00aa Quinzena)</option>
                                 <option value="dia20" ${c&&contractQuinzena(c)==='dia20'?'selected':''}>Dia 20 (2\u00aa Quinzena)</option></select></div>
                         </div>
+                        <div class="form-group"><label>Endere\u00e7o de embarque (onde pega a crian\u00e7a)</label><input id="edEmbarque" oninput="autoCalcKm('edEmbarque','edEntrega','edKm')" value="${vEmbarque}"></div>
+                        <div class="form-group"><label>Endere\u00e7o de entrega (escola)</label><input id="edEntrega" oninput="autoCalcKm('edEmbarque','edEntrega','edKm')" value="${vEntrega}"></div>
+                        <div class="form-group"><label>KM do percurso</label><input id="edKm" type="number" min="0" step="0.1" value="${rRota&&rRota.distancia_km?rRota.distancia_km:''}"></div>
                     ` : ''}
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         <button class="btn btn-add" onclick="salvarEdicaoUsuario()">Salvar altera\u00e7\u00f5es</button>
@@ -911,7 +932,15 @@
                         c.quinzena = quinzena;
                         c.vencimento_dia = (quinzena==='dia20'?20:5);
                         const r = db.routes.find(x=>x.id===c.route_id);
-                        if (r) r.valor_mensal = valor;
+                        if (r) {
+                            r.valor_mensal = valor;
+                            const embEl = document.getElementById('edEmbarque');
+                            const entEl = document.getElementById('edEntrega');
+                            const kmEl = document.getElementById('edKm');
+                            if (embEl && embEl.value.trim()) { const v=embEl.value.trim(); u.endereco=v; const p=db.route_stops.find(st=>st.route_id===r.id && st.tipo==='embarque'); if (p) p.endereco=v; }
+                            if (entEl && entEl.value.trim()) { const v=entEl.value.trim(); const p=db.route_stops.find(st=>st.route_id===r.id && st.tipo==='escola'); if (p) p.endereco=v; }
+                            if (kmEl) r.distancia_km = parseFloat(kmEl.value) || null;
+                        }
                     }
                 }
             }
@@ -1008,7 +1037,7 @@
                 const pay = (db.payments||[]).find(p=>p.contract_id===c.id);
                 const respUid = c.responsavel_id || (db.students.find(s=>s.id===c.student_id)||{}).responsavel_id;
                 return `<div class="item">
-                    <div class="item-header"><span class="item-name">${studentNome(c.student_id)}</span>${statusBadge(c.status)}</div>
+                    <div class="item-header"><span class="item-name">${studentNome(c.student_id)}</span>${statusBadge(c.status)} ${statusBadge(c.pago?'pago':'pendente')}</div>
                     <div class="item-small">${routeNome(c.route_id)} \u00b7 Turno: ${c.turno.replace('_',' + ')} \u00b7 ${money(c.valor_mensal)}/m\u00eas</div>
                     <div class="item-small">Respons\u00e1vel: ${userNome(respUid)}</div>
                     ${pay ? '<div class="item-small">Link: '+pay.link_url+' \u00b7 '+pay.status+'</div>' : ''}
@@ -1023,7 +1052,7 @@
         }
         function editarContrato(cid) {
             const c = db.contracts.find(x=>x.id===cid); if (!c) return;
-            const box = document.getElementById('editBoxContrato'); if (!box) return;
+            const box = document.getElementById('editBoxContrato') || document.getElementById('editBoxFin'); if (!box) return;
             box.innerHTML = `
                 <h3>Editar contrato</h3>
                 <div class="item" style="border:2px solid #0056b3;">
@@ -1039,13 +1068,16 @@
                             <option value="dia5" ${contractQuinzena(c)==='dia5'?'selected':''}>Dia 5 (1\u00aa Quinzena)</option>
                             <option value="dia20" ${contractQuinzena(c)==='dia20'?'selected':''}>Dia 20 (2\u00aa Quinzena)</option></select></div>
                     </div>
-                    <div class="form-group"><label>Situa\u00e7\u00e3o</label><select id="ecStatus">
+                    <div class="form-group"><label>Situa\u00e7\u00e3o do contrato</label><select id="ecStatus">
                         <option value="ativo" ${c.status==='ativo'?'selected':''}>Ativo</option>
                         <option value="pendente_pagamento" ${c.status==='pendente_pagamento'?'selected':''}>Aguardando pagamento</option>
                         <option value="cancelado" ${c.status==='cancelado'?'selected':''}>Cancelado</option></select></div>
+                    <div class="form-group"><label>Pagamento</label><select id="ecPago">
+                        <option value="pendente" ${!c.pago?'selected':''}>A receber (pendente)</option>
+                        <option value="pago" ${c.pago?'selected':''}>Pago (recebido)</option></select></div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         <button class="btn btn-add" onclick="salvarEdicaoContrato()">Salvar altera\u00e7\u00f5es</button>
-                        <button class="btn btn-outline" onclick="document.getElementById('editBoxContrato').innerHTML=''">Cancelar</button>
+                        <button class="btn btn-outline" onclick="var b=document.getElementById('editBoxContrato');if(b)b.innerHTML='';var f=document.getElementById('editBoxFin');if(f)f.innerHTML='';">Cancelar</button>
                     </div>
                 </div>`;
             if (box.scrollIntoView) box.scrollIntoView({behavior:'smooth'});
@@ -1061,11 +1093,13 @@
             c.quinzena = quinzena;
             c.vencimento_dia = (quinzena==='dia20'?20:5);
             c.status = status;
+            const pagoEl = document.getElementById('ecPago');
+            if (pagoEl) { c.pago = pagoEl.value==='pago'; if (c.pago) c.paid_at = c.paid_at || agora(); }
             const shifts = turno==='ida_volta' ? ['ida','volta'] : [turno];
             db.enrollments.forEach(e=>{ if (e.contract_id===c.id) e.ativo = (status==='ativo'); });
             db.enrollments = db.enrollments.filter(e=>e.contract_id!==c.id || shifts.includes(e.shift));
             if (status==='ativo') shifts.forEach(sh=>{ if (!db.enrollments.some(e=>e.contract_id===c.id && e.shift===sh)) db.enrollments.push({ id:'en_'+Date.now()+sh, contract_id:c.id, route_id:c.route_id, student_id:c.student_id, shift:sh, ativo:true }); });
-            save(); alert('Contrato atualizado.'); abaAdmin('contratos');
+            save(); alert('Contrato atualizado.'); abaAdmin(document.getElementById('editBoxContrato')?'contratos':'financeiro');
         }
         function excluirContrato(cid) {
             const c = db.contracts.find(x=>x.id===cid); if(!c) return;
@@ -1076,7 +1110,7 @@
         }
         function atualizarContratoAtivo(cid) {
             const c = db.contracts.find(x=>x.id===cid); if(!c) return;
-            c.status='ativo'; c.paid_at=agora(); c.data_ativacao=agora();
+            c.status='ativo'; c.pago=true; c.paid_at=agora(); c.data_ativacao=agora();
             const shifts = c.turno==='ida_volta' ? ['ida','volta'] : [c.turno];
             shifts.forEach(sh => { if (!db.enrollments.some(e=>e.contract_id===cid && e.shift===sh)) db.enrollments.push({ id:'en_'+Date.now()+sh, contract_id:cid, route_id:c.route_id, student_id:c.student_id, shift:sh, ativo:true }); });
             save(); alert('Contrato ativado manualmente (exce\u00e7\u00e3o).'); render();
@@ -1203,11 +1237,13 @@
         const CAT_DESPESA = ['Combust\u00edvel','Manuten\u00e7\u00e3o','Sal\u00e1rio','Seguro','Outros'];
         function contractQuinzena(c) { return c.quinzena || ((c.vencimento_dia||5) <= 15 ? 'dia5' : 'dia20'); }
         function recLinha(c) {
-            const pend = c.status !== 'ativo';
+            const pago = !!c.pago;
             return `<div class="resumo-item">
                 <span>${studentNome(c.student_id)} <span class="exp-cat">\u00b7 ${userNome(c.responsavel_id)}</span></span>
-                <span style="white-space:nowrap;">${money(c.valor_mensal)} ${statusBadge(c.status)}
-                    ${pend ? `<button class="mini-btn mb-ok" onclick="baixarReceita('${c.id}')" style="margin-left:6px;">Dar baixa</button>` : ''}
+                <span style="white-space:nowrap;">${money(c.valor_mensal)} ${statusBadge(pago?'pago':'pendente')}
+                    ${pago ? `<button class="mini-btn mb-warn" onclick="reabrirReceita('${c.id}')" style="margin-left:6px;">Reabrir</button>`
+                           : `<button class="mini-btn mb-ok" onclick="baixarReceita('${c.id}')" style="margin-left:6px;">Pago</button>`}
+                    <button class="mini-btn mb-add" onclick="editarContrato('${c.id}')" style="margin-left:6px;">Editar</button>
                 </span></div>`;
         }
         function despLinha(e) {
@@ -1217,6 +1253,7 @@
                 <span style="white-space:nowrap;">${money(e.valor)} ${statusBadge(pend?'pendente':'pago')}
                     ${pend ? `<button class="mini-btn mb-ok" onclick="baixarDespesa('${e.id}')" style="margin-left:6px;">Pagar</button>`
                            : `<button class="mini-btn mb-warn" onclick="reabrirDespesa('${e.id}')" style="margin-left:6px;">Reabrir</button>`}
+                    <button class="mini-btn mb-add" onclick="editarDespesa('${e.id}')" style="margin-left:6px;">Editar</button>
                     <button class="mini-btn mb-danger" onclick="removerDespesa('${e.id}')" style="margin-left:4px;">x</button>
                 </span></div>`;
         }
@@ -1227,6 +1264,7 @@
                 <span style="white-space:nowrap;">${money(r.valor)} ${statusBadge(pend?'pendente':'pago')}
                     ${pend ? `<button class="mini-btn mb-ok" onclick="baixarRev('${r.id}')" style="margin-left:6px;">Receber</button>`
                            : `<button class="mini-btn mb-warn" onclick="reabrirRev('${r.id}')" style="margin-left:6px;">Reabrir</button>`}
+                    <button class="mini-btn mb-add" onclick="editarReceitaManual('${r.id}')" style="margin-left:6px;">Editar</button>
                     <button class="mini-btn mb-danger" onclick="removerRev('${r.id}')" style="margin-left:4px;">x</button>
                 </span></div>`;
         }
@@ -1235,7 +1273,7 @@
             const revs = (db.revenues||[]).filter(r=>(r.quinzena||'dia5')===q);
             const desps = (db.expenses||[]).filter(e=>(e.quinzena||'dia5')===q);
             const recTotal = recs.reduce((s,c)=>s+Number(c.valor_mensal||0),0) + revs.reduce((s,r)=>s+Number(r.valor||0),0);
-            const recReceb = recs.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + revs.filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
+            const recReceb = recs.filter(c=>c.pago).reduce((s,c)=>s+Number(c.valor_mensal||0),0) + revs.filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
             const despTotal = desps.reduce((s,e)=>s+Number(e.valor||0),0);
             const despPago = desps.filter(e=>e.status==='pago').reduce((s,e)=>s+Number(e.valor||0),0);
             const saldo = recReceb - despPago;
@@ -1261,8 +1299,8 @@
             db.expenses = db.expenses || [];
             db.revenues = db.revenues || [];
             const contratos = db.contracts;
-            const recContrReceb = contratos.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
-            const recContrPend = contratos.filter(c=>c.status!=='ativo' && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const recContrReceb = contratos.filter(c=>c.pago).reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const recContrPend = contratos.filter(c=>!c.pago && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
             const revReceb = db.revenues.filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
             const revPend = db.revenues.filter(r=>r.status!=='pago').reduce((s,r)=>s+Number(r.valor||0),0);
             const recReceb = recContrReceb + revReceb;
@@ -1273,6 +1311,7 @@
             const saldoPrev = (recReceb+recPend) - (despPago+despPend);
             const catOpts = CAT_DESPESA.map(c=>`<option value="${c}">${c}</option>`).join('');
             return `
+                <div id="editBoxFin"></div>
                 <div class="fin-hero" style="background:${saldo>=0?'var(--success-green)':'var(--danger-red)'};">
                     <h3>${money(saldo)}</h3><p>Saldo realizado (recebido - despesas pagas)</p></div>
                 <div class="fin-grid">
@@ -1314,6 +1353,15 @@
 
                 ${quinzenaBloco('\ud83d\udcc5 1\u00aa Quinzena (Dia 5)', 'dia5')}
                 ${quinzenaBloco('\ud83d\udcc5 2\u00aa Quinzena (Dia 20)', 'dia20')}
+
+                <div class="quinzena-title">\ud83e\uddfe Resumo geral (receitas - despesas)</div>
+                <div class="item">
+                    <div class="resumo-item"><span>Total de receitas</span><span style="color:var(--success-green);font-weight:bold;">${money(recReceb+recPend)}</span></div>
+                    <div class="resumo-item"><span>Total de despesas</span><span style="color:var(--danger-red);font-weight:bold;">${money(despPago+despPend)}</span></div>
+                    <div class="resumo-item" style="font-weight:bold;border-top:1px solid #ddd;padding-top:8px;">
+                        <span>Saldo (receitas - despesas)</span>
+                        <span style="color:${saldoPrev>=0?'var(--success-green)':'var(--danger-red)'};">${money(saldoPrev)}</span></div>
+                </div>
             `;
         }
         function adicionarDespesa() {
@@ -1345,10 +1393,89 @@
         }
         function baixarReceita(cid) {
             const c = db.contracts.find(x=>x.id===cid); if (!c) return;
-            c.status='ativo'; c.paid_at=agora(); c.data_ativacao=agora();
+            c.status='ativo'; c.pago=true; c.paid_at=agora(); c.data_ativacao=c.data_ativacao||agora();
             const shifts = c.turno==='ida_volta' ? ['ida','volta'] : [c.turno];
             shifts.forEach(sh => { if (!db.enrollments.some(e=>e.contract_id===cid && e.shift===sh)) db.enrollments.push({ id:'en_'+Date.now()+sh, contract_id:cid, route_id:c.route_id, student_id:c.student_id, shift:sh, ativo:true }); });
             save(); abaAdmin('financeiro');
+        }
+        function reabrirReceita(cid) {
+            const c = db.contracts.find(x=>x.id===cid); if (!c) return;
+            c.pago=false; delete c.paid_at; save(); abaAdmin('financeiro');
+        }
+        function editarDespesa(id) {
+            const e = db.expenses.find(x=>x.id===id); if(!e) return;
+            const box = document.getElementById('editBoxFin'); if(!box) return;
+            const catOpts = CAT_DESPESA.map(c=>`<option value="${c}" ${e.categoria===c?'selected':''}>${c}</option>`).join('');
+            box.innerHTML = `
+                <h3>Editar despesa</h3>
+                <div class="item" style="border:2px solid #0056b3;">
+                    <input type="hidden" id="edxId" value="${e.id}">
+                    <div class="form-group"><label>Descri\u00e7\u00e3o</label><input id="edxDesc" value="${e.descricao||''}"></div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Categoria</label><select id="edxCat">${catOpts}</select></div>
+                        <div class="form-group"><label>Valor (R$)</label><input id="edxValor" type="number" min="0" step="0.01" value="${e.valor}"></div>
+                    </div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Data</label><input id="edxData" type="date" value="${e.data||''}"></div>
+                        <div class="form-group"><label>Quinzena</label><select id="edxQuinzena">
+                            <option value="dia5" ${(e.quinzena||'dia5')==='dia5'?'selected':''}>Dia 5 (1\u00aa Quinzena)</option>
+                            <option value="dia20" ${e.quinzena==='dia20'?'selected':''}>Dia 20 (2\u00aa Quinzena)</option></select></div>
+                    </div>
+                    <div class="form-group"><label>Situa\u00e7\u00e3o</label><select id="edxStatus">
+                        <option value="pendente" ${e.status!=='pago'?'selected':''}>A pagar</option>
+                        <option value="pago" ${e.status==='pago'?'selected':''}>Pago</option></select></div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-add" onclick="salvarEdicaoDespesa()">Salvar</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('editBoxFin').innerHTML=''">Cancelar</button>
+                    </div>
+                </div>`;
+            if (box.scrollIntoView) box.scrollIntoView({behavior:'smooth'});
+        }
+        function salvarEdicaoDespesa() {
+            const e = db.expenses.find(x=>x.id===document.getElementById('edxId').value); if(!e) return;
+            e.descricao = document.getElementById('edxDesc').value.trim() || e.descricao;
+            e.categoria = document.getElementById('edxCat').value;
+            e.valor = parseFloat(document.getElementById('edxValor').value) || 0;
+            e.data = document.getElementById('edxData').value || e.data;
+            e.quinzena = document.getElementById('edxQuinzena').value;
+            e.status = document.getElementById('edxStatus').value;
+            save(); alert('Despesa atualizada.'); abaAdmin('financeiro');
+        }
+        function editarReceitaManual(id) {
+            const r = db.revenues.find(x=>x.id===id); if(!r) return;
+            const box = document.getElementById('editBoxFin'); if(!box) return;
+            box.innerHTML = `
+                <h3>Editar receita</h3>
+                <div class="item" style="border:2px solid #0056b3;">
+                    <input type="hidden" id="edrId" value="${r.id}">
+                    <div class="form-group"><label>Descri\u00e7\u00e3o</label><input id="edrDesc" value="${r.descricao||''}"></div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Valor (R$)</label><input id="edrValor" type="number" min="0" step="0.01" value="${r.valor}"></div>
+                        <div class="form-group"><label>Data</label><input id="edrData" type="date" value="${r.data||''}"></div>
+                    </div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Quinzena</label><select id="edrQuinzena">
+                            <option value="dia5" ${(r.quinzena||'dia5')==='dia5'?'selected':''}>Dia 5 (1\u00aa Quinzena)</option>
+                            <option value="dia20" ${r.quinzena==='dia20'?'selected':''}>Dia 20 (2\u00aa Quinzena)</option></select></div>
+                        <div class="form-group"><label>Situa\u00e7\u00e3o</label><select id="edrStatus">
+                            <option value="pago" ${r.status==='pago'?'selected':''}>Recebido</option>
+                            <option value="pendente" ${r.status!=='pago'?'selected':''}>A receber</option></select></div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-add" onclick="salvarEdicaoReceitaManual()">Salvar</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('editBoxFin').innerHTML=''">Cancelar</button>
+                    </div>
+                </div>`;
+            if (box.scrollIntoView) box.scrollIntoView({behavior:'smooth'});
+        }
+        function salvarEdicaoReceitaManual() {
+            const r = db.revenues.find(x=>x.id===document.getElementById('edrId').value); if(!r) return;
+            r.descricao = document.getElementById('edrDesc').value.trim() || r.descricao;
+            r.valor = parseFloat(document.getElementById('edrValor').value) || 0;
+            r.data = document.getElementById('edrData').value || r.data;
+            r.quinzena = document.getElementById('edrQuinzena').value;
+            r.status = document.getElementById('edrStatus').value;
+            save(); alert('Receita atualizada.'); abaAdmin('financeiro');
         }
         function adicionarReceita() {
             db.revenues = db.revenues || [];
