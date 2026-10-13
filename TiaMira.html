@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0056b3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Tia Mira">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Tia Mira Transportes - Transporte Escolar</title>
+    <style>
+        :root {
+            --primary-blue: #0056b3;
+            --success-green: #28a745;
+            --dark-gray: #333;
+            --danger-red: #dc3545;
+            --warning-orange: #fd7e14;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0;
+            background-color: #f0f2f5; color: var(--dark-gray);
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+        header { background: white; width: 100%; text-align: center; padding: 12px 0; box-shadow: 0 2px 10px rgba(0,0,0,.1); }
+        .header-title { font-size: 22px; font-weight: bold; color: var(--primary-blue); margin: 0; }
+        .brand-logo { height: 84px; width: auto; display: inline-block; margin-bottom: 2px; }
+        .header-sub { font-size: 12px; color: #888; margin: 0; }
+        .container { width: 95%; max-width: 540px; margin: 15px 0; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,.05); }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-size: 15px; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-add { background: var(--primary-blue); color: white; }
+        .btn-success { background: var(--success-green); color: white; }
+        .btn-danger { background: var(--danger-red); color: white; }
+        .btn-warn { background: var(--warning-orange); color: white; }
+        .btn-outline { background: white; color: var(--primary-blue); border: 2px solid var(--primary-blue); }
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
+        .tab { flex: 1; min-width: 90px; padding: 12px; text-align: center; border: 2px solid var(--primary-blue); border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 13px; background: white; color: var(--primary-blue); }
+        .tab.active { background: var(--primary-blue); color: white; }
+        .item { background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 15px; margin-bottom: 10px; }
+        .item-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .item-name { font-weight: bold; font-size: 15px; }
+        .item-value { font-weight: bold; font-size: 15px; color: var(--primary-blue); }
+        .item-small { font-size: 12px; color: #666; margin-top: 4px; }
+        .badge { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; white-space: nowrap; }
+        .b-pendente { background: var(--warning-orange); }
+        .b-aprovado { background: var(--success-green); }
+        .b-reprovado { background: var(--danger-red); }
+        .b-ativo { background: var(--success-green); }
+        .b-aguardando { background: var(--warning-orange); }
+        .b-vencido { background: var(--danger-red); }
+        .b-cancelado { background: #6c757d; }
+        .notice { background: #fff3cd; border: 1px solid #ffecb5; color: #664d03; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 12px; }
+        .ok { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 12px; border-radius: 12px; font-size: 14px; margin-bottom: 12px; }
+        .mini-btn { border: none; cursor: pointer; font-size: 12px; font-weight: bold; padding: 7px 12px; border-radius: 8px; color: white; }
+        .mb-add { background: var(--primary-blue); }
+        .mb-ok { background: var(--success-green); }
+        .mb-danger { background: var(--danger-red); }
+        .mb-warn { background: var(--warning-orange); }
+        .grid2 { display: flex; gap: 10px; flex-wrap: wrap; }
+        .grid2 > * { flex: 1; min-width: 120px; }
+        .stat-card { background: var(--primary-blue); color: white; border-radius: 15px; padding: 14px; text-align: center; flex: 1; min-width: 110px; }
+        .stat-card h3 { margin: 0; font-size: 22px; }
+        .stat-card p { margin: 4px 0 0; font-size: 12px; opacity: .9; }
+        .fake-map { width: 100%; height: 180px; border-radius: 15px; border: 1px solid #ddd; background: linear-gradient(160deg, #e8f0fe 0%, #d9f2e6 60%, #fff3cd 100%); position: relative; overflow: hidden; }
+        .fake-map .pin { position: absolute; font-size: 26px; transform: translate(-50%,-50%); transition: left .8s, top .8s; }
+        .fake-map .label-pin { position: absolute; transform: translate(-50%,-100%); background: white; border-radius: 8px; padding: 2px 6px; font-size: 11px; font-weight: bold; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+        .float-info { position: absolute; bottom: 8px; left: 8px; right: 8px; background: rgba(255,255,255,.95); border-radius: 10px; padding: 8px; font-size: 12px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+        .hidden { display: none; }
+        .link { color: var(--primary-blue); cursor: pointer; font-weight: bold; text-decoration: underline; }
+        .aviso-topo { background: #e7f3ff; color: #0056b3; padding: 10px; border-radius: 10px; font-size: 13px; margin-bottom: 12px; }
+        hr { border: none; border-top: 1px dashed #ddd; margin: 14px 0; }
+        h2, h3 { color: var(--primary-blue); }
+        .rota-tag { background: #e7f3ff; color: #0056b3; border-radius: 10px; padding: 4px 8px; font-size: 12px; font-weight: bold; }
+        .parada-list { list-style: none; padding: 0; margin: 8px 0; }
+        .parada-list li { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .parada-num { background: var(--primary-blue); color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; }
+        .presenca { display: flex; gap: 6px; margin-top: 6px; }
+        .presenca button { flex: 1; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="logo.png" alt="Tia Mira Transportes" class="brand-logo">
+        <p class="header-sub">Transporte escolar agendado · Acesso exclusivo</p>
+        <div id="headerUser" class="header-sub"></div>
+    </header>
+    <div id="app" class="container"></div>
+
+    <!-- Tela de bloqueio por PIN -->
+    <div id="pinOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+         background:rgba(0,0,0,0.9); z-index:2000; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="background:white; padding:30px; border-radius:20px; text-align:center; width:90%; max-width:320px; box-sizing:border-box;">
+            <h3 style="color:#0056b3; margin:0 0 5px;">Tia Mira 🔒</h3>
+            <p style="color:#888; font-size:13px; margin:0 0 15px;">Digite seu PIN de 4 d\u00edgitos</p>
+            <input type="password" id="pinInput" maxlength="4" inputmode="numeric" pattern="[0-9]*"
+                   placeholder="****" style="text-align:center; font-size:24px; letter-spacing:12px;"
+                   onkeydown="if(event.key==='Enter')verificarPin()">
+            <div id="pinErro" style="color:#dc3545; font-size:13px; min-height:18px; margin-top:5px;"></div>
+            <button class="btn btn-add" onclick="verificarPin()">ENTRAR</button>
+            <p style="font-size:11px; color:#bbb; margin-top:10px;">Altere ou remova o PIN no perfil Administrativo.</p>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // Tia Mira Transportes - MVP PWA (demo com localStorage)
+        // Fluxo: cadastro pelo administrativo -> cadastrar aluno -> contratar rota
+        //        -> pagar -> roteiro motorista -> GPS -> presença -> finalizar
+        // ============================================================
+
+        const LS_KEY = 'tiamira_db_v1';
+
+        const seed = {
+            users: [
+                { id:'u_admin', nome:'Admin Tia Mira', email:'admin@tiamira.com.br', senha:'123', tipo:'admin', status:'aprovado' },
+                { id:'u_resp', nome:'Fernanda Rocha', email:'fernanda@email.com', senha:'123', cpf:'111.222.333-44', tipo:'responsavel', status:'aprovado', telefone_emergencia:'(11) 98888-0000' },
+                { id:'u_resp2', nome:'Roberto Dias', email:'roberto@email.com', senha:'123', cpf:'555.666.777-88', tipo:'responsavel', status:'aprovado' },
+                { id:'u_pend', nome:'Mariana Nunes', email:'mariana@email.com', senha:'123', cpf:'999.888.777-66', tipo:'responsavel', status:'pendente', telefone_emergencia:'(11) 97777-1111' },
+                { id:'u_mot', nome:'Toninho Martins', email:'toninho@email.com', senha:'123', tipo:'motorista', status:'aprovado', ativo:true },
+                { id:'u_mot2', nome:'Carlos Andrade', email:'carlos@email.com', senha:'123', tipo:'motorista', status:'aprovado', ativo:true }
+            ],
+            students: [
+                { id:'s1', responsavel_id:'u_resp', nome:'Lucas Rocha', nascimento:'2014-03-12', escola_id:'e1', serie:'5\u00ba Ano', necessidades:'', observacoes:'', ativo:true },
+                { id:'s2', responsavel_id:'u_resp', nome:'Laura Rocha', nascimento:'2017-07-25', escola_id:'e1', serie:'2\u00ba Ano', necessidades:'Cadeirinha', observacoes:'', ativo:true },
+                { id:'s3', responsavel_id:'u_resp2', nome:'Pedro Dias', nascimento:'2013-11-02', escola_id:'e2', serie:'7\u00ba Ano', necessidades:'', observacoes:'', ativo:true }
+            ],
+            schools: [
+                { id:'e1', nome:'Col\u00e9gio Alpha', endereco:'Av. Brasil, 1000', bairro:'Centro' },
+                { id:'e2', nome:'Escola Estadual XYZ', endereco:'Rua das Palmeiras, 500', bairro:'Jardim' }
+            ],
+            drivers: [
+                { id:'d1', user_id:'u_mot', cnh:'123456789', veiculo_id:'v1' },
+                { id:'d2', user_id:'u_mot2', cnh:'987654321', veiculo_id:'v2' }
+            ],
+            vehicles: [
+                { id:'v1', motorista_id:'d1', placa:'KID1A23', modelo:'Fiat Ducato', cor:'Branco', capacidade:12, tipo:'van', ativo:true },
+                { id:'v2', motorista_id:'d2', placa:'KID4B56', modelo:'Volkswagen Kombi', cor:'Azul', capacidade:10, tipo:'van', ativo:true }
+            ],
+            routes: [
+                { id:'rta', nome:'Jardim das Flores -> Col\u00e9gio Alpha', escola_id:'e1', driver_id:'d1', vehicle_id:'v1', turno:'ida_volta', hora_ida:'06:40', hora_volta:'12:30', bairro_origem:'Jardim das Flores', ativo:true, valor_mensal:110 },
+                { id:'rtb', nome:'Vila Nova -> Escola Estadual XYZ', escola_id:'e2', driver_id:'d2', vehicle_id:'v2', turno:'ida_volta', hora_ida:'06:50', hora_volta:'11:50', bairro_origem:'Vila Nova', ativo:true, valor_mensal:95 }
+            ],
+            route_stops: [
+                { id:'p1', route_id:'rta', ordem:1, endereco:'Rua Ac\u00e1cias, 200', bairro:'Jardim das Flores', tipo:'embarque' },
+                { id:'p2', route_id:'rta', ordem:2, endereco:'Av. das Hort\u00eansias, 340', bairro:'Jardim das Flores', tipo:'embarque' },
+                { id:'p3', route_id:'rta', ordem:3, endereco:'Col\u00e9gio Alpha - Av. Brasil, 1000', bairro:'Centro', tipo:'escola' },
+                { id:'p4', route_id:'rtb', ordem:1, endereco:'Rua das Palmeiras, 120', bairro:'Vila Nova', tipo:'embarque' },
+                { id:'p5', route_id:'rtb', ordem:2, endereco:'Escola Estadual XYZ - Rua das Palmeiras, 500', bairro:'Jardim', tipo:'escola' }
+            ],
+            contracts: [
+                { id:'c1', responsavel_id:'u_resp', student_id:'s1', route_id:'rta', turno:'ida_volta', valor_mensal:110, status:'ativo', data_ativacao:'2026-10-01', paid_at:'2026-10-01', vencimento_dia:5 },
+                { id:'c2', responsavel_id:'u_resp', student_id:'s2', route_id:'rta', turno:'ida', valor_mensal:90, status:'pendente_pagamento', vencimento_dia:5 }
+            ],
+            enrollments: [
+                { id:'en1', contract_id:'c1', route_id:'rta', student_id:'s1', shift:'ida', ativo:true },
+                { id:'en2', contract_id:'c1', route_id:'rta', student_id:'s1', shift:'volta', ativo:true }
+            ],
+            trips: [],
+            payments: [],
+            trip_active: null
+        };
+
+        let db = load();
+        function load() { try { const raw = localStorage.getItem(LS_KEY); if (raw) return JSON.parse(raw); } catch(e){} return JSON.parse(JSON.stringify(seed)); }
+        function save() { localStorage.setItem(LS_KEY, JSON.stringify(db)); }
+        function resetDB() { db = JSON.parse(JSON.stringify(seed)); save(); render(); }
+
+        let sessao = { user_id: null };
+        function userAtual() { return db.users.find(u => u.id === sessao.user_id) || null; }
+
+        function pad(n){ return String(n).padStart(2,'0'); }
+        function agora() { const d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
+        function hoje() { const d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+        function money(v) { return 'R$ '+Number(v).toFixed(2).replace('.',','); }
+        function statusBadge(s) {
+            const map = { pendente:'b-pendente', pendente_pagamento:'b-aguardando', aprovado:'b-aprovado', ativo:'b-ativo', vencido:'b-vencido', cancelado:'b-cancelado', reprovado:'b-reprovado', agendado:'b-aguardando', iniciado:'b-aguardando', em_andamento:'b-aguardando', finalizado:'b-ativo' };
+            const label = { pendente:'Pendente', pendente_pagamento:'Aguardando pagamento', aprovado:'Aprovado', ativo:'Ativo', vencido:'Vencido', cancelado:'Cancelado', reprovado:'Reprovado', agendado:'Agendado', iniciado:'Iniciado', em_andamento:'Em andamento', finalizado:'Finalizado' };
+            return '<span class="badge '+(map[s]||'')+'">'+(label[s]||s)+'</span>';
+        }
+        function userNome(uid) { const u = db.users.find(x=>x.id===uid); return u ? u.nome : '-'; }
+        function schoolNome(sid) { const s = db.schools.find(x=>x.id===sid); return s ? s.nome : '-'; }
+        function studentNome(sid) { const s = db.students.find(x=>x.id===sid); return s ? s.nome : '-'; }
+        function routeNome(rid) { const r = db.routes.find(x=>x.id===rid); return r ? r.nome : '-'; }
+
+        // ================= LOGIN =================
+        function loginView() {
+            return `
+                <div class="notice"><b>Tia Mira Transportes</b> tem acesso exclusivo. Os cadastros s\u00e3o realizados pelo administrativo. Contate a equipe para liberar seu acesso.</div>
+                <h3>Acessar plataforma</h3>
+                <div class="form-group"><label>E-mail</label><input id="loginEmail" type="email" value="admin@tiamira.com.br"></div>
+                <div class="form-group"><label>Senha</label><input id="loginSenha" type="password" value="123"></div>
+                <button class="btn btn-add" onclick="doLogin()">Entrar</button>
+            `;
+        }
+        function doLogin() {
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            const senha = document.getElementById('loginSenha').value;
+            const u = db.users.find(x => x.email.toLowerCase() === email && x.senha === senha);
+            if (!u) { alert('E-mail ou senha inv\u00e1lidos.'); return; }
+            if (u.status !== 'aprovado') { alert('Seu cadastro est\u00e1 em an\u00e1lise. Aguarde a aprova\u00e7\u00e3o.'); return; }
+            sessao.user_id = u.id; save(); render();
+        }
+        function demoLogin(tipo) {
+            const u = db.users.find(x => x.tipo === tipo && x.status === 'aprovado');
+            if (!u) { alert('Nenhum usu\u00e1rio dispon\u00edvel para esse perfil.'); return; }
+            sessao.user_id = u.id; render();
+        }
+        function logout() { sessao.user_id = null; db.trip_active = null; save(); render(); }
+
+        
+
+        // ================= RESPONSÁVEL =================
+        function responsavelView(u) {
+            const alunos = db.students.filter(s => s.responsavel_id === u.id);
+            const contratos = db.contracts.filter(c => c.responsavel_id === u.id);
+            return `
+                <div class="aviso-topo">Ol\u00e1, <b>${u.nome.split(' ')[0]}</b>! Gerencie seus filhos, rotas e mensalidades.</div>
+                <div class="tabs">
+                    <div class="tab active" id="r1" onclick="abaResp('home')">Home</div>
+                    <div class="tab" id="r2" onclick="abaResp('alunos')">Meus Alunos</div>
+                    <div class="tab" id="r3" onclick="abaResp('rotas')">Rotas Dispon\u00edveis</div>
+                    <div class="tab" id="r4" onclick="abaResp('contratacoes')">Contrata\u00e7\u00f5es</div>
+                    <div class="tab" id="r5" onclick="logout()">Sair</div>
+                </div>
+                <div id="respContent">${respHome(u)}</div>
+            `;
+        }
+        function abaResp(nome) {
+            const u = userAtual(); if (!u) return;
+            ['r1','r2','r3','r4'].forEach(id=>{ const el=document.getElementById(id); el&&el.classList.remove('active'); });
+            const map = { home:'r1', alunos:'r2', rotas:'r3', contratacoes:'r4' };
+            const at = document.getElementById(map[nome]); if (at) at.classList.add('active');
+            let html='';
+            if (nome==='home') html = respHome(u);
+            if (nome==='alunos') html = respAlunos(u);
+            if (nome==='rotas') html = respRotas(u);
+            if (nome==='contratacoes') html = respContratacoes(u);
+            document.getElementById('respContent').innerHTML = html;
+        }
+        function respHome(u) {
+            const alunos = db.students.filter(s=>s.responsavel_id===u.id);
+            const ativos = db.contracts.filter(c=>c.responsavel_id===u.id && c.status==='ativo');
+            const contratoAtivoIds = ativos.map(c=>c.id);
+            const tripResp = db.trips.filter(t => t.status==='em_andamento' && (t.students||[]).some(st => {
+                const en = db.enrollments.find(e=>e.id===st.enrollment_id);
+                return en && contratoAtivoIds.includes(en.contract_id);
+            }))[0];
+            return `
+                <div class="stat-card"><h3>${alunos.length}</h3><p>Meus alunos</p></div>
+                <div class="stat-card" style="background:#28a745;"><h3>${ativos.length}</h3><p>Contratos ativos</p></div>
+                <hr>
+                <h3>Acompanhar hoje</h3>
+                ${tripResp ? '<button class="btn btn-success" onclick="responsavelAcompanhar()">Acompanhar viagem em tempo real</button>' : '<p>Aguardando in\u00edcio da viagem. Quando o motorista iniciar, o bot\u00e3o aparecer\u00e1 aqui.</p>'}
+            `;
+        }
+        function respAlunos(u) {
+            const alunos = db.students.filter(s=>s.responsavel_id===u.id);
+            let html = `<h3>Meus Alunos</h3><button class="btn btn-add" onclick="formAluno('${u.id}')">Adicionar aluno</button><hr id="formAlunoSlot"></hr>`;
+            if (!alunos.length) html += '<p>Nenhum aluno cadastrado ainda.</p>';
+            html += alunos.map(s=>`
+                <div class="item">
+                    <div class="item-header"><span class="item-name">${s.nome}</span>${statusBadge(s.ativo?'ativo':'cancelado')}</div>
+                    <div class="item-small">${schoolNome(s.escola_id)} \u00b7 ${s.serie||'-'} \u00b7 Nasc: ${s.nascimento}</div>
+                    ${s.necessidades ? '<div class="item-small" style="color:#dc3545;">Necessidade: '+s.necessidades+'</div>':''}
+                </div>`).join('');
+            return html;
+        }
+        function formAluno(rid) {
+            const opts = db.schools.map(sc=>`<option value="${sc.id}">${sc.nome}</option>`).join('');
+            document.getElementById('formAlunoSlot').innerHTML = `
+                <div class="item">
+                    <h3 style="margin-top:0;">Novo aluno</h3>
+                    <div class="form-group"><label>Nome completo</label><input id="alNome"></div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Data de nascimento</label><input id="alNasc" type="date"></div>
+                        <div class="form-group"><label>S\u00e9rie/Turma</label><input id="alSerie"></div>
+                    </div>
+                    <div class="form-group"><label>Escola</label><select id="alEscola">${opts}</select></div>
+                    <div class="form-group"><label>Necessidades especiais (ex: cadeirinha)</label><input id="alNecess" placeholder="Opcional"></div>
+                    <div class="form-group"><label>Observa\u00e7\u00f5es</label><input id="alObs"></div>
+                    <button class="btn btn-success" onclick="salvarAluno('${rid}')">Salvar aluno</button>
+                </div>`;
+        }
+        function salvarAluno(rid) {
+            const nome = document.getElementById('alNome').value.trim();
+            if (!nome) { alert('Informe o nome do aluno.'); return; }
+            db.students.push({
+                id:'s_'+Date.now(), responsavel_id:rid, nome,
+                nascimento:document.getElementById('alNasc').value,
+                serie:document.getElementById('alSerie').value.trim(),
+                escola_id:document.getElementById('alEscola').value,
+                necessidades:document.getElementById('alNecess').value.trim(),
+                observacoes:document.getElementById('alObs').value.trim(), ativo:true
+            });
+            save(); render();
+        }
+        function respRotas(u) {
+            const rotasAtivas = db.routes.filter(r=>r.ativo);
+            return `
+                <h3>Rotas Dispon\u00edveis</h3>
+                <div class="notice">Filtros reais no app final: Escola, Bairro, Turno, Vagas restantes. Aqui listamos as rotas ativas.</div>
+                ${rotasAtivas.map(r=>{
+                    const v = db.vehicles.find(vv=>vv.id===r.vehicle_id);
+                    const d = db.drivers.find(dd=>dd.id===r.driver_id);
+                    const mot = d ? userNome(d.user_id) : '-';
+                    const ocup = db.enrollments.filter(e=>e.route_id===r.id && e.ativo).length;
+                    const vagas = (v?v.capacidade:0) - ocup;
+                    const stops = db.route_stops.filter(st=>st.route_id===r.id).sort((a,b)=>a.ordem-b.ordem);
+                    return `<div class="item">
+                        <div class="item-header"><span class="item-name">${r.nome}</span><span class="rota-tag">${vagas>0?vagas+' vaga(s)':'Lota\u00e7\u00e3o cheia'}</span></div>
+                        <div class="item-small">Escola: ${schoolNome(r.escola_id)} \u00b7 Ida ${r.hora_ida} \u00b7 Volta ${r.hora_volta}</div>
+                        <div class="item-small">Motorista: ${mot} \u00b7 ${v? v.modelo+' ('+v.placa+', cap. '+v.capacidade+')':''} \u00b7 Mensal ${money(r.valor_mensal)}/aluno</div>
+                        <button class="mini-btn mb-add" onclick="verParadas('${r.id}')" style="margin-top:6px;">Ver paradas</button>
+                        ${vagas>0 ? '<button class="mini-btn mb-ok" onclick="formContratar(\''+r.id+'\')" style="margin-top:6px;">Contratar rota</button>' : ''}
+                        <div id="stops${r.id}" class="hidden"></div>
+                    </div>`;
+                }).join('')}
+            `;
+        }
+        function verParadas(rid) {
+            const stops = db.route_stops.filter(st=>st.route_id===rid).sort((a,b)=>a.ordem-b.ordem);
+            const el = document.getElementById('stops'+rid);
+            el.innerHTML = '<ul class="parada-list">' + stops.map(s=>`<li><span class="parada-num">${s.ordem}</span><div><b>${s.endereco}</b><br><span style="font-size:11px;">${s.tipo==='escola'?'Escola':s.tipo} \u00b7 ${s.bairro}</span></div></li>`).join('') + '</ul>';
+            el.classList.toggle('hidden');
+        }
+        function formContratar(rid) {
+            const u = userAtual();
+            const alunos = db.students.filter(s=>s.responsavel_id===u.id && s.ativo);
+            if (!alunos.length) { alert('Cadastre um aluno primeiro.'); abaResp('alunos'); return; }
+            const r = db.routes.find(x=>x.id===rid);
+            const optsA = alunos.map(a=>`<option value="${a.id}">${a.nome}</option>`).join('');
+            document.getElementById('app').innerHTML = `
+                <h3>Contratar rota: ${r.nome}</h3>
+                <div class="form-group"><label>Aluno</label><select id="ctAluno">${optsA}</select></div>
+                <div class="form-group"><label>Turno</label><select id="ctTurno"><option value="ida_volta">Ida + Volta (${money(r.valor_mensal)})</option><option value="ida">Somente Ida (${money(Math.round(r.valor_mensal*0.8))})</option><option value="volta">Somente Volta (${money(Math.round(r.valor_mensal*0.8))})</option></select></div>
+                <div class="notice">Valor mensal por aluno. Ap\u00f3s o pagamento via link PIX/Cart\u00e3o, o aluno entra no roteiro do motorista.</div>
+                <button class="btn btn-add" onclick="confirmarContrato('${rid}')">Gerar contrato + link de pagamento</button>
+                <button class="btn btn-outline" onclick="render()">Voltar</button>`;
+        }
+        function confirmarContrato(rid) {
+            const u = userAtual(); if (!u) return;
+            const sid = document.getElementById('ctAluno').value;
+            const turno = document.getElementById('ctTurno').value;
+            const r = db.routes.find(x=>x.id===rid);
+            const valor = turno==='ida_volta' ? r.valor_mensal : Math.round(r.valor_mensal*0.8);
+            // controle de vagas no momento da contratação
+            const v = db.vehicles.find(vv=>vv.id===r.vehicle_id);
+            const ocup = db.enrollments.filter(e=>e.route_id===rid && e.ativo).length;
+            if (ocup >= v.capacidade) { alert('Lota\u00e7\u00e3o atingida. N\u00e3o \u00e9 poss\u00edvel contratar.'); return; }
+            // evita duplicidade do mesmo aluno na mesma rota+turno
+            const dup = db.contracts.some(c => c.responsavel_id===u.id && c.student_id===sid && c.route_id===rid && c.status!=='cancelado');
+            if (dup) { alert('Este aluno j\u00e1 possui contrato nesta rota.'); return; }
+            const c = {
+                id:'c_'+Date.now(), responsavel_id:u.id, student_id:sid, route_id:rid,
+                turno, valor_mensal:valor, status:'pendente_pagamento', vencimento_dia:5
+            };
+            db.contracts.push(c);
+            const link = { id:'l_'+Date.now(), contract_id:c.id, descricao:'Mensalidade '+r.nome.split(' -> ')[0]+' - '+studentNome(sid), valor, forma:'PIX/cart\u00e3o', status:'pendente', link_url:'https://pay.mock.br/'+Date.now(), gerado_em:agora() };
+            if (!db.payments) db.payments = [];
+            db.payments.push(link);
+            save();
+            document.getElementById('app').innerHTML = `
+                <div class="ok"><b>Contrato gerado - Aguardando pagamento</b></div>
+                <div class="item"><div class="item-name">${link.descricao}</div><div class="item-value">${money(valor)}</div>
+                <div class="item-small">Link: ${link.link_url}</div></div>
+                <button class="btn btn-success" onclick="pagarContrato('${c.id}')">Pagar agora (simular PIX/cart\u00e3o)</button>
+                <button class="btn btn-outline" onclick="render()">Voltar</button>`;
+        }
+        function pagarContrato(cid) {
+            const c = db.contracts.find(x=>x.id===cid); if (!c) return;
+            c.status = 'ativo'; c.paid_at = agora(); c.data_ativacao = agora();
+            const pay = (db.payments||[]).find(p=>p.contract_id===cid);
+            if (pay) { pay.status='pago'; pay.pago_em=agora(); }
+            // gera enrollments
+            const shifts = c.turno==='ida_volta' ? ['ida','volta'] : [c.turno];
+            shifts.forEach(sh => db.enrollments.push({ id:'en_'+Date.now()+sh, contract_id:c.id, route_id:c.route_id, student_id:c.student_id, shift:sh, ativo:true }));
+            save();
+            alert('Pagamento confirmado via webhook simulado. Aluno inclu\u00eddo no roteiro do motorista!');
+            render();
+        }
+        function respContratacoes(u) {
+            const contratos = db.contracts.filter(c=>c.responsavel_id===u.id);
+            if (!contratos.length) return '<p>Voc\u00ea ainda n\u00e3o tem contrata\u00e7\u00f5es. V\u00e1 em "Rotas Dispon\u00edveis".</p>';
+            return contratos.map(c=>{
+                const pay = (db.payments||[]).find(p=>p.contract_id===c.id);
+                return `<div class="item">
+                    <div class="item-header"><span class="item-name">${routeNome(c.route_id)}</span>${statusBadge(c.status)}</div>
+                    <div class="item-small">Aluno: ${studentNome(c.student_id)} \u00b7 Turno: ${c.turno.replace('_',' + ')} \u00b7 ${money(c.valor_mensal)}/m\u00eas</div>
+                    ${pay && c.status==='pendente_pagamento' ? '<button class="btn btn-warn" onclick="pagarContrato(\''+c.id+'\')">Pagar mensalidade (link PIX/cart\u00e3o)</button>' : ''}
+                    ${guestInfo(c)}
+                </div>`;
+            }).join('');
+        }
+
+        // ================= ACOMPANHAR (RESPONSÁVEL) =================
+        function responsavelAcompanhar() {
+            const u = userAtual(); if (!u) return;
+            const t = db.trips.find(tr => tr.status==='em_andamento' && (tr.students||[]).some(st => {
+                const en = db.enrollments.find(e=>e.id===st.enrollment_id);
+                const c = en ? db.contracts.find(cc=>cc.id===en.contract_id) : null;
+                return c && c.responsavel_id===u.id;
+            }));
+            if (!t) { alert('Nenhuma viagem em andamento para seus filhos.'); return; }
+            const r = db.routes.find(x=>x.id===t.route_id);
+            const mot = db.drivers.find(d=>d.id===t.driver_id);
+            const v = db.vehicles.find(vv=>vv.id===r.vehicle_id);
+            const html = `
+                <h3>Acompanhamento em tempo real</h3>
+                <div class="fake-map" id="tmMap">
+                    <span class="label-pin" style="left:12%;top:35%;">Rota</span>
+                    <span class="label-pin" style="left:88%;top:65%;">Escola/Casa</span>
+                    <div class="pin" id="tmPin" style="left:10%;top:50%;">🚐</div>
+                    <div class="float-info">
+                        <span><b>Motorista:</b> ${mot?userNome(mot.user_id):'-'} ${v?'('+v.modelo+' - '+v.placa+')':''}</span>
+                        <span id="tmEta">A caminho</span>
+                        <span id="tmStatus">${t.tipo.toUpperCase()}</span>
+                    </div>
+                </div>
+                <div class="item"><span class="item-name">${r.nome}</span><div class="item-small">Iniciada em ${t.iniciado_em}</div></div>
+                <button class="btn btn-outline" onclick="render()">Voltar</button>`;
+            document.getElementById('app').innerHTML = html;
+            animateTm(t.id);
+        }
+        function animateTm(tid) {
+            let p = 0.1;
+            const iv = setInterval(()=>{
+                p = Math.min(0.9, p+0.05);
+                const pin = document.getElementById('tmPin');
+                if (pin) { pin.style.left = (p*100)+'%'; pin.style.top = (35+(30*(p/0.9)))+'%'; }
+                const eta = document.getElementById('tmEta');
+                if (eta) eta.textContent = 'ETA: '+Math.max(1,Math.round((0.9-p)*10))+' min';
+                if (p>=0.9) { clearInterval(iv); const st=document.getElementById('tmStatus'); if (st) st.textContent='Chegou ao destino final'; }
+            }, 900);
+        }
+
+        // ================= MOTORISTA =================
+        function motoristaView(u) {
+            const drv = db.drivers.find(d=>d.user_id===u.id);
+            const rotasDoMotorista = db.routes.filter(r=>r.driver_id===(drv?drv.id:null) && r.ativo);
+            const contratosX = db.contracts.filter(c=>c.status==='ativo' && rotasDoMotorista.some(r=>r.id===c.route_id));
+            const previsto = contratosX.reduce((s,c)=>s+c.valor_mensal,0);
+            let todayTrips = db.trips.filter(t=>rotasDoMotorista.some(r=>r.id===t.route_id) && t.data===hoje());
+            if (!todayTrips.length && rotasDoMotorista.length) {
+                // gera automaticamente as viagens do dia (ida)
+                rotasDoMotorista.forEach(r=>{
+                    if (!db.trips.some(t=>t.route_id===r.id && t.data===hoje() && t.tipo==='ida')) {
+                        db.trips.push({ id:'t_'+Date.now()+'_'+r.id+'_ida', route_id:r.id, driver_id:r.driver_id, vehicle_id:r.vehicle_id, tipo:'ida', data:hoje(), hora:r.hora_ida, status:'agendado', students: db.enrollments.filter(e=>e.route_id===r.id && e.shift==='ida' && e.ativo).map(e=>({ enrollment_id:e.id, student_id:e.student_id, stop_id:null, status:'aguardando' })) });
+                    }
+                });
+                save();
+                todayTrips = db.trips.filter(t=>rotasDoMotorista.some(r=>r.id===t.route_id) && t.data===hoje());
+            }
+            return `
+                <div class="aviso-topo">Ol\u00e1, <b>${u.nome.split(' ')[0]}</b>! Mensalidade prevista no m\u00eas: <b>${money(previsto)}</b></div>
+                <h3>Roteiro de hoje (${hoje()})</h3>
+                ${todayTrips.length ? todayTrips.map(t=>roteiroTripCard(t)).join('') : '<p>Nenhuma rota ativa vinculada a voc\u00ea.</p>'}
+                <hr><button class="btn btn-outline" onclick="logout()">Sair</button>`;
+        }
+        function roteiroTripCard(t) {
+            const r = db.routes.find(x=>x.id===t.route_id);
+            return `<div class="item">
+                <div class="item-header"><span class="item-name">${t.tipo.toUpperCase()} \u00b7 ${r.nome}</span>${statusBadge(t.status)}</div>
+                <div class="item-small">${t.hora||r.hora_id} \u00b7 ${(t.students||[]).length} aluno(s)</div>
+                ${t.status==='agendado' ? '<button class="mini-btn mb-add" onclick="iniciarTrip(\''+t.id+'\')">Iniciar viagem (ativa GPS + acompanhamento)</button>' : ''}
+                ${t.status==='iniciado' ? '<button class="mini-btn mb-warn" onclick="iniciarTrip(\''+t.id+'\')">Marcar em andamento</button>' : ''}
+                ${t.status==='em_andamento' ? '<button class="mini-btn mb-ok" onclick="finalizarTrip(\''+t.id+'\')">Finalizar viagem</button>' : ''}
+                ${(t.status==='iniciado'||t.status==='em_andamento') ? '<button class="mini-btn mb-add" onclick="abrirPresenca(\''+t.id+'\')">Lista de presen\u00e7a</button>' : ''}
+                <div id="presenca${t.id}"></div>
+            </div>`;
+        }
+        function iniciarTrip(tid) {
+            const t = db.trips.find(x=>x.id===tid); if (!t) return;
+            if (t.status==='agendado') { t.status='iniciado'; t.iniciado_em=agora(); }
+            else if (t.status==='iniciado') { t.status='em_andamento'; }
+            db.trip_active = tid; save(); render();
+        }
+        function finalizarTrip(tid) {
+            const t = db.trips.find(x=>x.id===tid); if (!t) return;
+            t.status='finalizado'; t.finalizado_em=agora();
+            if (db.trip_active===tid) db.trip_active=null;
+            save(); alert('Viagem finalizada. GPS desativado.'); render();
+        }
+        function abrirPresenca(tid) {
+            const t = db.trips.find(x=>x.id===tid); if (!t) return;
+            const el = document.getElementById('presenca'+tid);
+            el.innerHTML = (t.students||[]).map(st=>{
+                const aluno = db.students.find(a=>a.id===st.student_id);
+                const en = db.enrollments.find(e=>e.id===st.enrollment_id);
+                const c = en ? db.contracts.find(cc=>cc.id===en.contract_id) : null;
+                const resp = c ? userNome(c.responsavel_id) : '-';
+                const stt = st.status==='aguardando' ? 'Presente' : (st.status==='ausente' ? 'Ausente' : st.status);
+                return `<div class="item" style="margin-bottom:6px;">
+                    <div class="item-header"><span class="item-name">${aluno?aluno.nome:'-'} <span class="badge b-ativo">${stt}</span></span></div>
+                    <div class="item-small">Respons\u00e1vel: ${resp} ${c?respTelContato(c):''}</div>
+                    ${aluno && aluno.necessidades ? '<div class="item-small" style="color:#dc3545;">'+aluno.necessidades+'</div>':''}
+                    <div class="presenca">
+                        <button class="mini-btn mb-ok" onclick="marcarPresenca('${tid}','${st.enrollment_id}','embarcado')">Embarque</button>
+                        <button class="mini-btn mb-warn" onclick="marcarPresenca('${tid}','${st.enrollment_id}','desembarcado')">Desembarque</button>
+                        <button class="mini-btn mb-danger" onclick="marcarPresenca('${tid}','${st.enrollment_id}','ausente')">Ausente</button>
+                    </div>
+                </div>`;
+            }).join('') || '<p>Sem alunos nesta viagem.</p>';
+        }
+        function respTelC(c) { const r = db.users.find(u=>u.id===c.responsavel_id); return r ? (r.whats||r.telefone_emergencia||'') : ''; }
+        function respTelContato(c) { const t = respTelC(c); return '\u00b7 Tel: '+t; }
+        function marcarPresenca(tid, enid, status) {
+            const t = db.trips.find(x=>x.id===tid); if (!t) return;
+            const st = (t.students||[]).find(s=>s.enrollment_id===enid);
+            if (st) {
+                st.status = status;
+                st.marcado_em = agora();
+                if (status==='embarcado') st.embarcado_em=agora();
+                if (status==='desembarcado') { st.desembarcado_em=agora(); }
+            }
+            save(); render();
+        }
+
+        // ================= ADMIN =================
+        function adminView(u) {
+            const pend = db.users.filter(x=>x.status==='pendente');
+            const contratosPend = db.contracts.filter(c=>c.status!=='ativo' && c.status!=='cancelado');
+            const rotasAtivas = db.routes.filter(r=>r.ativo);
+            const alunosAtivos = db.students.filter(s=>s.ativo);
+            const motAtivos = db.users.filter(x=>x.tipo==='motorista' && x.status==='aprovado' && x.ativo);
+            return `
+                <div class="aviso-topo">Painel administrativo - ${u.nome}</div>
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <div class="stat-card"><h3>${pend.length}</h3><p>Cadastros pendentes</p></div>
+                    <div class="stat-card" style="background:#fd7e14;"><h3>${contratosPend.length}</h3><p>Contratos ag. pagamento</p></div>
+                    <div class="stat-card" style="background:#28a745;"><h3>${rotasAtivas.length}</h3><p>Rotas ativas</p></div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <div class="stat-card"><h3>${alunosAtivos.length}</h3><p>Alunos matriculados</p></div>
+                    <div class="stat-card" style="background:#333;"><h3>${motAtivos.length}</h3><p>Motoristas ativos</p></div>
+                </div>
+                <div class="tabs">
+                    <div class="tab active" id="ad1" onclick="abaAdmin('aprovacoes')">Aprova\u00e7\u00f5es</div>
+                    <div class="tab" id="ad2" onclick="abaAdmin('usuarios')">Usu\u00e1rios</div>
+                    <div class="tab" id="ad3" onclick="abaAdmin('contratos')">Contratos</div>
+                    <div class="tab" id="ad4" onclick="abaAdmin('rotas')">Rotas</div>
+                    <div class="tab" id="ad5" onclick="abaAdmin('financeiro')">Financeiro</div>
+                    <div class="tab" id="ad6" onclick="logout()">Sair</div>
+                </div>
+                <div id="adminContent">${adminAprovacoes()}</div>
+            `;
+        }
+        function abaAdmin(nome) {
+            ['ad1','ad2','ad3','ad4','ad5'].forEach(id=>{ const el=document.getElementById(id); el&&el.classList.remove('active'); });
+            const map = { aprovacoes:'ad1', usuarios:'ad2', contratos:'ad3', rotas:'ad4', financeiro:'ad5' };
+            const at = document.getElementById(map[nome]); if (at) at.classList.add('active');
+            let html='';
+            if (nome==='aprovacoes') html = adminAprovacoes();
+            if (nome==='usuarios') html = adminUsuarios();
+            if (nome==='contratos') html = adminContratos();
+            if (nome==='rotas') html = adminRotas();
+            if (nome==='financeiro') html = adminFinanceiro();
+            document.getElementById('adminContent').innerHTML = html;
+        }
+        function adminAprovacoes() {
+            const pend = db.users.filter(x=>x.status==='pendente');
+            if (!pend.length) return '<p>Nenhum cadastro pendente. \u2713</p>';
+            return pend.map(u=>`
+                <div class="item">
+                    <div class="item-header"><span class="item-name">${u.nome}</span>${statusBadge('pendente')}</div>
+                    <div class="item-small">Respons\u00e1vel \u00b7 CPF ${u.cpf||'-'} \u00b7 ${u.email||''}</div>
+                    <div class="item-small">Endere\u00e7o: ${u.endereco||'-'} \u00b7 Emerg\u00eancia: ${u.telefone_emergencia||'-'}</div>
+                    <div class="item-small">Comprovante anexado: ${(u.docs||[]).length>0 ? 'sim ('+u.docs.length+')' : 'n\u00e3o (opcional)'}</div>
+                    <div style="display:flex;gap:8px;margin-top:8px;">
+                        <button class="mini-btn mb-ok" onclick="aprovarResp('${u.id}')">Aprovar</button>
+                        <button class="mini-btn mb-danger" onclick="reprovarResp('${u.id}')">Reprovar</button>
+                    </div></div>`).join('');
+        }
+        function aprovarResp(uid) {
+            const u = db.users.find(x=>x.id===uid); if(!u) return;
+            u.status='aprovado'; u.approved_at=agora(); u.approved_by=sessao.user_id;
+            save(); alert('Respons\u00e1vel aprovado. Notifica\u00e7\u00e3o enviada.'); render();
+        }
+        function reprovarResp(uid) {
+            const m = prompt('Justificativa da reprova\u00e7\u00e3o:'); if (m===null) return;
+            const u = db.users.find(x=>x.id===uid); if(!u) return;
+            u.status='reprovado'; u.motivo_reprovacao=m.trim()||'Sem justificativa';
+            save(); alert('Reprovado com justificativa.'); render();
+        }
+        function adminUsuarios() {
+            const tipos = ['responsavel','motorista','admin'];
+            const labels = { responsavel:'Respons\u00e1vel', motorista:'Motorista', admin:'Administrativo' };
+            return `
+                <h3>Cadastrar usu\u00e1rio</h3>
+                <div class="item" style="border-style:dashed;">
+                    <div class="form-group"><label>Nome completo</label><input id="nuNome" placeholder="Nome e sobrenome"></div>
+                    <div class="form-group"><label>CPF</label><input id="nuCpf" placeholder="000.000.000-00"></div>
+                    <div class="form-group"><label>E-mail</label><input id="nuEmail" type="email"></div>
+                    <div class="form-group"><label>WhatsApp</label><input id="nuWhats" placeholder="(11) 99999-9999"></div>
+                    <div class="form-group"><label>Perfil</label><select id="nuTipo">${tipos.map(t=>`<option value="${t}">${labels[t]}</option>`).join('')}</select></div>
+                    <div class="form-group"><label>Endere\u00e7o (opcional)</label><input id="nuEnd" placeholder="Rua, n\u00famero, bairro"></div>
+                    <button class="btn btn-add" onclick="salvarCadastroAdmin()">Cadastrar usu\u00e1rio</button>
+                </div>
+                <h3 style="margin-top:16px;">Usu\u00e1rios (${db.users.length})</h3>
+                ${db.users.map(u=>`
+                    <div class="item">
+                        <div class="item-header"><span class="item-name">${u.nome}</span>${statusBadge(u.status)}</div>
+                        <div class="item-small">${labels[u.tipo]||u.tipo} \u00b7 ${u.email}${u.cpf?' \u00b7 CPF '+u.cpf:''}</div>
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            ${u.status==='pendente' ? `<button class="mini-btn mb-ok" onclick="aprovarResp('${u.id}')">Aprovar</button>` : ''}
+                            <button class="mini-btn mb-danger" onclick="removerUsuario('${u.id}')">Remover</button>
+                        </div></div>`).join('')}
+                <h3 style="margin-top:16px;">\ud83d\udd12 Prote\u00e7\u00e3o por PIN</h3>
+                <p style="font-size:12px; color:#888; margin:0 0 10px;">
+                    Define um PIN de 4 d\u00edgitos. O app s\u00f3 abre depois de digitar o PIN correto.
+                </p>
+                <div style="display:flex; gap:6px;">
+                    <input type="password" id="pinConfig" maxlength="4" inputmode="numeric" pattern="[0-9]*"
+                           placeholder="****" style="flex:1; text-align:center; font-size:20px; letter-spacing:10px;">
+                    <button style="flex:none; width:auto; margin:0; padding:10px 14px; border:none; border-radius:10px;
+                            background:#0056b3; color:white; font-size:14px; font-weight:bold; cursor:pointer;"
+                            onclick="definirPin()">Definir</button>
+                    <button style="flex:none; width:auto; margin:0; padding:10px 14px; border:none; border-radius:10px;
+                            background:#666; color:white; font-size:14px; font-weight:bold; cursor:pointer;"
+                            onclick="removerPin()">Remover</button>
+                </div>
+            `;
+        }
+        function salvarCadastroAdmin() {
+            const nome = document.getElementById('nuNome').value.trim();
+            const cpf = document.getElementById('nuCpf').value.trim();
+            const email = document.getElementById('nuEmail').value.trim().toLowerCase();
+            const whats = document.getElementById('nuWhats').value.trim();
+            const end = document.getElementById('nuEnd').value.trim();
+            const tipo = document.getElementById('nuTipo').value;
+            if (!nome || !cpf || !email) { alert('Preencha nome, CPF e e-mail.'); return; }
+            if (db.users.some(u=>u.email===email)) { alert('J\u00e1 existe usu\u00e1rio com esse e-mail.'); return; }
+            db.users.push({
+                id:'u_'+Date.now(), nome, cpf, email, whats, endereco:end,
+                tipo, senha:'1234', status:'aprovado', created_by:sessao.user_id, created_at:agora()
+            });
+            if (tipo === 'motorista') {
+                db.drivers.push({ id:'d_'+Date.now(), user_id:db.users[db.users.length-1].id, cnh:'', veiculo_id:null });
+            }
+            save(); alert('Usu\u00e1rio cadastrado e aprovado. Acesse com o e-mail informado e senha 1234.');
+            abaAdmin('usuarios');
+        }
+        function removerUsuario(uid) {
+            const u = db.users.find(x=>x.id===uid); if(!u) return;
+            if (u.id === sessao.user_id) { alert('Voc\u00ea n\u00e3o pode remover a si mesmo.'); return; }
+            if (!confirm('Remover usu\u00e1rio '+u.nome+'?')) return;
+            db.users = db.users.filter(x=>x.id!==uid);
+            save(); abaAdmin('usuarios');
+        }
+        function adminContratos() {
+            const contratos = db.contracts;
+            if (!contratos.length) return '<p>Nenhum contrato.</p>';
+            return contratos.map(c=>{
+                const pay = (db.payments||[]).find(p=>p.contract_id===c.id);
+                return `<div class="item">
+                    <div class="item-header"><span class="item-name">${studentNome(c.student_id)}</span>${statusBadge(c.status)}</div>
+                    <div class="item-small">${routeNome(c.route_id)} \u00b7 Turno: ${c.turno.replace('_',' + ')} \u00b7 ${money(c.valor_mensal)}/m\u00eas</div>
+                    <div class="item-small">Respons\u00e1vel: ${userNome(c.responsavel_id)}</div>
+                    ${pay ? '<div class="item-small">Link: '+pay.link_url+' \u00b7 '+pay.status+'</div>' : ''}
+                    ${c.status==='pendente_pagamento' ? '<button class="mini-btn mb-warn" onclick="atualizarContratoAtivo(\''+c.id+'\')">Confirmar pagamento manualmente</button>' : ''}
+                </div>`;
+            }).join('');
+        }
+        function atualizarContratoAtivo(cid) {
+            const c = db.contracts.find(x=>x.id===cid); if(!c) return;
+            c.status='ativo'; c.paid_at=agora(); c.data_ativacao=agora();
+            const shifts = c.turno==='ida_volta' ? ['ida','volta'] : [c.turno];
+            shifts.forEach(sh => { if (!db.enrollments.some(e=>e.contract_id===cid && e.shift===sh)) db.enrollments.push({ id:'en_'+Date.now()+sh, contract_id:cid, route_id:c.route_id, student_id:c.student_id, shift:sh, ativo:true }); });
+            save(); alert('Contrato ativado manualmente (exce\u00e7\u00e3o).'); render();
+        }
+        function adminRotas() {
+            return db.routes.map(r=>{
+                const v = db.vehicles.find(vv=>vv.id===r.vehicle_id);
+                const ocup = db.enrollments.filter(e=>e.route_id===r.id && e.ativo).length;
+                const vagas = (v?v.capacidade:0)-ocup;
+                const stops = db.route_stops.filter(st=>st.route_id===r.id).sort((a,b)=>a.ordem-b.ordem);
+                return `<div class="item">
+                    <div class="item-header"><span class="item-name">${r.nome}</span><span class="rota-tag">${ocup}/${v?v.capacidade:'?'} vagas</span></div>
+                    <div class="item-small">${schoolNome(r.escola_id)} \u00b7 Ida ${r.hora_ida} \u00b7 Volta ${r.hora_volta} \u00b7 ${money(r.valor_mensal)}/aluno</div>
+                    <div class="item-small">Motorista: ${userNome(db.drivers.find(d=>d.id===r.driver_id).user_id)} \u00b7 ${v?v.modelo+' - '+v.placa:''}</div>
+                    <ul class="parada-list">${stops.map(s=>`<li><span class="parada-num">${s.ordem}</span>${s.endereco} <span style="font-size:11px;color:#888;">(${s.tipo})</span></li>`).join('')}</ul>
+                </div>`;
+            }).join('');
+        }
+        function adminFinanceiro() {
+            const recebido = db.payments.filter(p=>p.status==='pago').reduce((s,p)=>s+p.valor,0);
+            const pendente = db.payments.filter(p=>p.status!=='pago').reduce((s,p)=>s+p.valor,0);
+            const mensAtivo = db.contracts.filter(c=>c.status==='ativo').reduce((s,c)=>s+c.valor_mensal,0);
+            return `
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <div class="stat-card" style="background:#28a745;"><h3>${money(recebido)}</h3><p>Recebido</p></div>
+                    <div class="stat-card" style="background:#fd7e14;"><h3>${money(pendente)}</h3><p>A receber (links)</p></div>
+                    <div class="stat-card" style="background:#0056b3;"><h3>${money(mensAtivo)}</h3><p>Mensalidades ativas/m\u00eas</p></div>
+                </div>
+                <h3>Links de pagamento</h3>
+                ${(db.payments||[]).length ? db.payments.map(p=>`<div class="item"><div class="item-header"><span class="item-name">${p.descricao||p.contract_id}</span>${statusBadge(p.status)}</div><div class="item-small">${money(p.valor)} \u00b7 ${p.forma} \u00b7 ${p.link_url}</div></div>`).join('') : '<p>Nenhum link gerado.</p>'}
+            `;
+        }
+
+        // ================= RENDER =================
+        function render() {
+            const app = document.getElementById('app');
+            const u = userAtual();
+            const hd = document.getElementById('headerUser');
+            if (!u) { hd.textContent=''; app.innerHTML = loginView(); return; }
+            hd.textContent = 'Conectado: '+u.nome+' ('+(u.tipo==='admin'?'Administrativo':u.tipo)+')';
+            if (u.status !== 'aprovado') {
+                app.innerHTML = `<div class="notice"><b>Seu cadastro est\u00e1 em an\u00e1lise.</b><br>Status: ${statusBadge('pendente')}<br>Voc\u00ea ser\u00e1 avisado por WhatsApp/e-mail quando aprovado.</div><button class="btn btn-outline" onclick="logout()">Sair</button>`;
+                return;
+            }
+            if (u.tipo === 'admin') app.innerHTML = adminView(u);
+            else if (u.tipo === 'motorista') app.innerHTML = motoristaView(u);
+            else app.innerHTML = responsavelView(u);
+        }
+
+        // ================= PROTE\u00c7\u00c3O POR PIN (igual ao Control) =================
+        const PIN_KEY = 'tiamiraPIN';
+        function getPin() { return localStorage.getItem(PIN_KEY); }
+        function pinDefinido() { return !!getPin(); }
+
+        function initPin() {
+            if (pinDefinido()) {
+                const overlay = document.getElementById('pinOverlay');
+                overlay.style.display = 'flex';
+                setTimeout(function () { document.getElementById('pinInput').focus(); }, 50);
+            }
+        }
+
+        function verificarPin() {
+            const valor = document.getElementById('pinInput').value.trim();
+            if (valor === getPin()) {
+                document.getElementById('pinErro').textContent = '';
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinOverlay').style.display = 'none';
+            } else {
+                document.getElementById('pinErro').textContent = 'PIN incorreto. Tente novamente.';
+                document.getElementById('pinInput').value = '';
+            }
+        }
+
+        function definirPin() {
+            const valor = document.getElementById('pinConfig').value.trim();
+            if (!/^\d{4}$/.test(valor)) {
+                alert('O PIN deve ter exatamente 4 d\u00edgitos.');
+                return;
+            }
+            localStorage.setItem(PIN_KEY, valor);
+            document.getElementById('pinConfig').value = '';
+            alert('PIN definido com sucesso!');
+        }
+
+        function removerPin() {
+            if (!pinDefinido()) { alert('Nenhum PIN definido.'); return; }
+            if (!confirm('Remover a prote\u00e7\u00e3o por PIN?')) return;
+            localStorage.removeItem(PIN_KEY);
+            document.getElementById('pinConfig').value = '';
+            alert('PIN removido.');
+        }
+
+        render();
+        initPin();
+    </script>
+</body>
+</html>
