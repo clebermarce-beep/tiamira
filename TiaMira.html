@@ -180,6 +180,18 @@
                             if (u.email && u.email.toLowerCase() === 'admin@tiamira.com.br') { u.email = 'zemirafaustino@gmail.com'; u.senha = ''; }
                         });
                     }
+                    // limpeza de registros órfãos (usuário/aluno/rota removidos)
+                    if (Array.isArray(d.users)) {
+                        const uids = d.users.map(u=>u.id);
+                        const rids = (d.routes||[]).map(r=>r.id);
+                        d.students = (d.students||[]).filter(s => uids.includes(s.responsavel_id));
+                        const sids = d.students.map(s=>s.id);
+                        d.contracts = (d.contracts||[]).filter(c => sids.includes(c.student_id) && rids.includes(c.route_id));
+                        const cids = d.contracts.map(c=>c.id);
+                        d.enrollments = (d.enrollments||[]).filter(e => cids.includes(e.contract_id));
+                        d.route_stops = (d.route_stops||[]).filter(p => rids.includes(p.route_id));
+                        d.drivers = (d.drivers||[]).filter(dr => uids.includes(dr.user_id));
+                    }
                     return d;
                 }
             } catch(e){}
@@ -550,7 +562,7 @@
             const rotasAtivas = db.routes.filter(r=>r.ativo);
             const recPago = db.contracts.filter(c=>c.pago).reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
             const recPend = db.contracts.filter(c=>!c.pago && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status!=='pago').reduce((s,r)=>s+Number(r.valor||0),0);
-            const alunosAtivos = db.students.filter(s=>s.ativo);
+            const alunosAtivos = db.students.filter(s=>s.ativo && db.contracts.some(c=>c.student_id===s.id && c.status!=='cancelado'));
             const kmTotal = db.routes.filter(r=>r.ativo).reduce((s,r)=>s+Number(r.distancia_km||0),0);
             return `
                 <div class="aviso-topo">Painel administrativo - ${u.nome}</div>
