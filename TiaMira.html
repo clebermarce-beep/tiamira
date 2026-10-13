@@ -135,7 +135,7 @@
 
         const seed = {
             users: [
-                { id:'u_admin', nome:'Admin Tia Mira', email:'admin@tiamira.com.br', senha:'123', tipo:'admin', status:'aprovado' },
+                { id:'u_admin', nome:'Admin Tia Mira', email:'zemirafaustino@gmail.com', senha:'', tipo:'admin', status:'aprovado' },
                 { id:'u_resp', nome:'Fernanda Rocha', email:'fernanda@email.com', senha:'123', cpf:'111.222.333-44', tipo:'responsavel', status:'aprovado', telefone_emergencia:'(11) 98888-0000' },
                 { id:'u_resp2', nome:'Roberto Dias', email:'roberto@email.com', senha:'123', cpf:'555.666.777-88', tipo:'responsavel', status:'aprovado' },
                 { id:'u_pend', nome:'Mariana Nunes', email:'mariana@email.com', senha:'123', cpf:'999.888.777-66', tipo:'responsavel', status:'pendente', telefone_emergencia:'(11) 97777-1111' },
@@ -181,6 +181,7 @@
             trips: [],
             payments: [],
             expenses: [],
+            revenues: [],
             trip_active: null
         };
 
@@ -191,6 +192,12 @@
                 if (raw) {
                     const d = JSON.parse(raw);
                     if (!d.expenses) d.expenses = [];
+                    if (!d.revenues) d.revenues = [];
+                    if (Array.isArray(d.users)) {
+                        d.users.forEach(u => {
+                            if (u.email && u.email.toLowerCase() === 'admin@tiamira.com.br') { u.email = 'zemirafaustino@gmail.com'; u.senha = ''; }
+                        });
+                    }
                     return d;
                 }
             } catch(e){}
@@ -221,16 +228,23 @@
             return `
                 <div class="notice"><b>Tia Mira Transportes</b> tem acesso exclusivo. Os cadastros s\u00e3o realizados pelo administrativo. Contate a equipe para liberar seu acesso.</div>
                 <h3>Acessar plataforma</h3>
-                <div class="form-group"><label>E-mail</label><input id="loginEmail" type="email" value="admin@tiamira.com.br"></div>
-                <div class="form-group"><label>Senha</label><input id="loginSenha" type="password" value="123"></div>
+                <div class="form-group"><label>E-mail</label><input id="loginEmail" type="email" value="zemirafaustino@gmail.com"></div>
+                <div class="form-group"><label>Senha</label><input id="loginSenha" type="password" value="" placeholder="No primeiro acesso, digite a senha que deseja criar"></div>
                 <button class="btn btn-add" onclick="doLogin()">Entrar</button>
             `;
         }
         function doLogin() {
             const email = document.getElementById('loginEmail').value.trim().toLowerCase();
             const senha = document.getElementById('loginSenha').value;
-            const u = db.users.find(x => x.email.toLowerCase() === email && x.senha === senha);
+            const u = db.users.find(x => x.email.toLowerCase() === email);
             if (!u) { alert('E-mail ou senha inv\u00e1lidos.'); return; }
+            if (!u.senha) {
+                if (!senha || senha.length < 3) { alert('Primeiro acesso: digite a senha que voc\u00ea deseja criar (m\u00edn. 3 caracteres) e clique em Entrar. Ela ficar\u00e1 salva.'); return; }
+                u.senha = senha; save();
+                alert('Senha criada com sucesso! Guarde-a para os pr\u00f3ximos acessos.');
+            } else if (u.senha !== senha) {
+                alert('E-mail ou senha inv\u00e1lidos.'); return;
+            }
             if (u.status !== 'aprovado') { alert('Seu cadastro est\u00e1 em an\u00e1lise. Aguarde a aprova\u00e7\u00e3o.'); return; }
             sessao.user_id = u.id; save(); render();
         }
@@ -551,39 +565,38 @@
 
         // ================= ADMIN =================
         function adminView(u) {
-            const pend = db.users.filter(x=>x.status==='pendente');
-            const contratosPend = db.contracts.filter(c=>c.status!=='ativo' && c.status!=='cancelado');
             const rotasAtivas = db.routes.filter(r=>r.ativo);
+            const recPago = db.contracts.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
+            const recPend = db.contracts.filter(c=>c.status!=='ativo' && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + (db.revenues||[]).filter(r=>r.status!=='pago').reduce((s,r)=>s+Number(r.valor||0),0);
             const alunosAtivos = db.students.filter(s=>s.ativo);
             const motAtivos = db.users.filter(x=>x.tipo==='motorista' && x.status==='aprovado' && x.ativo);
             return `
                 <div class="aviso-topo">Painel administrativo - ${u.nome}</div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                    <div class="stat-card"><h3>${pend.length}</h3><p>Cadastros pendentes</p></div>
-                    <div class="stat-card" style="background:#fd7e14;"><h3>${contratosPend.length}</h3><p>Contratos ag. pagamento</p></div>
-                    <div class="stat-card" style="background:#28a745;"><h3>${rotasAtivas.length}</h3><p>Rotas ativas</p></div>
+                    <div class="stat-card"><h3>${db.users.length}</h3><p>Usu\u00e1rios</p></div>
+                    <div class="stat-card"><h3>${rotasAtivas.length}</h3><p>Rotas ativas</p></div>
+                    <div class="stat-card" style="background:#28a745;"><h3>${money(recPago)}</h3><p>Pagas</p></div>
+                    <div class="stat-card" style="background:#fd7e14;"><h3>${money(recPend)}</h3><p>Pendentes</p></div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <div class="stat-card"><h3>${alunosAtivos.length}</h3><p>Alunos matriculados</p></div>
                     <div class="stat-card" style="background:#333;"><h3>${motAtivos.length}</h3><p>Motoristas ativos</p></div>
                 </div>
                 <div class="tabs">
-                    <div class="tab active" id="ad1" onclick="abaAdmin('aprovacoes')">Aprova\u00e7\u00f5es</div>
-                    <div class="tab" id="ad2" onclick="abaAdmin('usuarios')">Usu\u00e1rios</div>
-                    <div class="tab" id="ad3" onclick="abaAdmin('contratos')">Contratos</div>
-                    <div class="tab" id="ad4" onclick="abaAdmin('rotas')">Rotas</div>
-                    <div class="tab" id="ad5" onclick="abaAdmin('financeiro')">Financeiro</div>
-                    <div class="tab" id="ad6" onclick="logout()">Sair</div>
+                    <div class="tab active" id="ad1" onclick="abaAdmin('usuarios')">Usuários</div>
+                    <div class="tab" id="ad2" onclick="abaAdmin('contratos')">Contratos</div>
+                    <div class="tab" id="ad3" onclick="abaAdmin('rotas')">Rotas</div>
+                    <div class="tab" id="ad4" onclick="abaAdmin('financeiro')">Financeiro</div>
+                    <div class="tab" id="ad5" onclick="logout()">Sair</div>
                 </div>
-                <div id="adminContent">${adminAprovacoes()}</div>
+                <div id="adminContent">${adminUsuarios()}</div>
             `;
         }
         function abaAdmin(nome) {
-            ['ad1','ad2','ad3','ad4','ad5'].forEach(id=>{ const el=document.getElementById(id); el&&el.classList.remove('active'); });
-            const map = { aprovacoes:'ad1', usuarios:'ad2', contratos:'ad3', rotas:'ad4', financeiro:'ad5' };
+            ['ad1','ad2','ad3','ad4'].forEach(id=>{ const el=document.getElementById(id); el&&el.classList.remove('active'); });
+            const map = { usuarios:'ad1', contratos:'ad2', rotas:'ad3', financeiro:'ad4' };
             const at = document.getElementById(map[nome]); if (at) at.classList.add('active');
             let html='';
-            if (nome==='aprovacoes') html = adminAprovacoes();
             if (nome==='usuarios') html = adminUsuarios();
             if (nome==='contratos') html = adminContratos();
             if (nome==='rotas') html = adminRotas();
@@ -618,7 +631,9 @@
         function adminUsuarios() {
             const tipos = ['responsavel','motorista','admin'];
             const labels = { responsavel:'Respons\u00e1vel', motorista:'Motorista', admin:'Administrativo' };
+            const eu = userAtual();
             return `
+                <div id="editBox"></div>
                 <h3>Cadastrar usu\u00e1rio</h3>
                 <div class="item" style="border-style:dashed;">
                     <div class="form-group"><label>Perfil</label><select id="nuTipo" onchange="togglePerfilCampos()">
@@ -656,7 +671,7 @@
                         <div class="form-group"><label>Endere\u00e7o (opcional)</label><input id="nuEnd" placeholder="Rua, n\u00famero, bairro"></div>
                     </div>
 
-                    <button class="btn btn-add" onclick="salvarCadastroAdmin()">Cadastrar usu\u00e1rio / gerar contrato</button>
+                    <button class="btn btn-add" id="btnCadastro" onclick="salvarCadastroAdmin()">Cadastrar usu\u00e1rio / gerar contrato</button>
                 </div>
                 <h3 style="margin-top:16px;">Usu\u00e1rios (${db.users.length})</h3>
                 ${db.users.map(u=>`
@@ -665,7 +680,9 @@
                         <div class="item-small">${labels[u.tipo]||u.tipo} \u00b7 ${u.email}${u.cpf?' \u00b7 CPF '+u.cpf:''}</div>
                         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
                             ${u.status==='pendente' ? `<button class="mini-btn mb-ok" onclick="aprovarResp('${u.id}')">Aprovar</button>` : ''}
+                            <button class="mini-btn mb-add" onclick="editarUsuario('${u.id}')">Editar</button>
                             ${u.tipo==='responsavel' ? `<button class="mini-btn mb-add" onclick="imprimirContrato('${u.id}')">Imprimir contrato</button>` : ''}
+                            <button class="mini-btn mb-warn" onclick="redefinirSenha('${u.id}')">Redefinir senha</button>
                             <button class="mini-btn mb-danger" onclick="removerUsuario('${u.id}')">Remover</button>
                         </div></div>`).join('')}
                 <h3 style="margin-top:16px;">\ud83d\udd12 Prote\u00e7\u00e3o por PIN</h3>
@@ -682,6 +699,12 @@
                             background:#666; color:white; font-size:14px; font-weight:bold; cursor:pointer;"
                             onclick="removerPin()">Remover</button>
                 </div>
+                <h3 style="margin-top:16px;">\ud83d\udc64 Meu acesso</h3>
+                <div class="item" style="border-style:dashed;">
+                    <div class="form-group"><label>Meu e-mail (login)</label><input id="maEmail" type="email" value="${eu?eu.email:''}"></div>
+                    <div class="form-group"><label>Nova senha</label><input id="maSenha" type="password" placeholder="Deixe em branco para n\u00e3o alterar"></div>
+                    <button class="btn btn-add" onclick="salvarMeuAcesso()">Salvar meu acesso</button>
+                </div>
             `;
         }
         function togglePerfilCampos() {
@@ -691,6 +714,8 @@
             if (!resp || !simp) return;
             resp.style.display = (t === 'responsavel') ? 'block' : 'none';
             simp.style.display = (t === 'responsavel') ? 'none' : 'block';
+            const btn = document.getElementById('btnCadastro');
+            if (btn) btn.textContent = (t === 'responsavel') ? 'Cadastrar usu\u00e1rio / gerar contrato' : 'Cadastrar usu\u00e1rio';
         }
         function salvarCadastroAdmin() {
             const tipo = document.getElementById('nuTipo').value;
@@ -746,12 +771,113 @@
             alert('Aluno cadastrado! Contrato ATIVO e rota criados automaticamente.\n\nAcesso do respons\u00e1vel: '+email+' / senha 1234');
             abaAdmin('usuarios');
         }
+        function salvarMeuAcesso() {
+            const u = userAtual(); if (!u) return;
+            const email = document.getElementById('maEmail').value.trim().toLowerCase();
+            const senha = document.getElementById('maSenha').value;
+            if (!email) { alert('Informe o e-mail.'); return; }
+            if (db.users.some(x=>x.email.toLowerCase()===email && x.id!==u.id)) { alert('Esse e-mail j\u00e1 \u00e9 usado por outro usu\u00e1rio.'); return; }
+            u.email = email;
+            if (senha) { if (senha.length < 3) { alert('Senha muito curta (m\u00edn. 3 caracteres).'); return; } u.senha = senha; }
+            save(); alert('Acesso atualizado com sucesso.'); render();
+        }
+        function redefinirSenha(uid) {
+            const u = db.users.find(x=>x.id===uid); if (!u) return;
+            const nova = prompt('Nova senha para '+u.nome+' (m\u00edn. 3 caracteres):');
+            if (nova === null) return;
+            if (nova.trim().length < 3) { alert('Senha muito curta (m\u00edn. 3 caracteres).'); return; }
+            u.senha = nova.trim(); save(); alert('Senha redefinida.'); abaAdmin('usuarios');
+        }
         function removerUsuario(uid) {
             const u = db.users.find(x=>x.id===uid); if(!u) return;
             if (u.id === sessao.user_id) { alert('Voc\u00ea n\u00e3o pode remover a si mesmo.'); return; }
             if (!confirm('Remover usu\u00e1rio '+u.nome+'?')) return;
             db.users = db.users.filter(x=>x.id!==uid);
             save(); abaAdmin('usuarios');
+        }
+        function editarUsuario(uid) {
+            const u = db.users.find(x=>x.id===uid); if (!u) return;
+            const isResp = u.tipo === 'responsavel';
+            let s = null, c = null;
+            if (isResp) {
+                s = db.students.find(x=>x.responsavel_id===uid);
+                if (s) c = db.contracts.find(x=>x.student_id===s.id);
+            }
+            const escolaNome = (isResp && s && s.escola_id) ? ((db.schools.find(e=>e.id===s.escola_id)||{}).nome||'') : '';
+            const box = document.getElementById('editBox');
+            if (!box) return;
+            box.innerHTML = `
+                <h3>Editar usu\u00e1rio</h3>
+                <div class="item" style="border:2px solid #0056b3;">
+                    <input type="hidden" id="edId" value="${u.id}">
+                    <div class="form-group"><label>Nome ${isResp?'do respons\u00e1vel':'completo'}</label><input id="edNome" value="${u.nome||''}"></div>
+                    <div class="grid2">
+                        <div class="form-group"><label>CPF</label><input id="edCpf" value="${u.cpf||''}"></div>
+                        <div class="form-group"><label>WhatsApp</label><input id="edWhats" value="${u.whats||''}"></div>
+                    </div>
+                    <div class="form-group"><label>E-mail (login)</label><input id="edEmail" type="email" value="${u.email||''}"></div>
+                    <div class="form-group"><label>Endere\u00e7o</label><input id="edEnd" value="${u.endereco||''}"></div>
+                    ${isResp && s ? `
+                        <div class="form-group"><label>Nome do aluno</label><input id="edAluno" value="${s.nome||''}"></div>
+                        <div class="form-group"><label>Escola</label><input id="edEscola" value="${escolaNome}"></div>
+                        <div class="grid2">
+                            <div class="form-group"><label>Per\u00edodo</label><select id="edPeriodo">
+                                <option value="manha" ${s.periodo==='manha'?'selected':''}>Manh\u00e3</option>
+                                <option value="tarde" ${s.periodo==='tarde'?'selected':''}>Tarde</option></select></div>
+                            <div class="form-group"><label>Professor(a)</label><input id="edProfessor" value="${s.professor||''}"></div>
+                        </div>
+                        <div class="grid2">
+                            <div class="form-group"><label>Valor da mensalidade (R$)</label><input id="edValor" type="number" min="0" step="0.01" value="${c?c.valor_mensal:''}"></div>
+                            <div class="form-group"><label>Quinzena de cobran\u00e7a</label><select id="edQuinzena">
+                                <option value="dia5" ${!c||contractQuinzena(c)==='dia5'?'selected':''}>Dia 5 (1\u00aa Quinzena)</option>
+                                <option value="dia20" ${c&&contractQuinzena(c)==='dia20'?'selected':''}>Dia 20 (2\u00aa Quinzena)</option></select></div>
+                        </div>
+                    ` : ''}
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-add" onclick="salvarEdicaoUsuario()">Salvar altera\u00e7\u00f5es</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('editBox').innerHTML=''">Cancelar</button>
+                    </div>
+                </div>`;
+            if (box.scrollIntoView) box.scrollIntoView({behavior:'smooth'});
+        }
+        function salvarEdicaoUsuario() {
+            const uid = document.getElementById('edId').value;
+            const u = db.users.find(x=>x.id===uid); if (!u) return;
+            const nome = document.getElementById('edNome').value.trim();
+            const email = document.getElementById('edEmail').value.trim().toLowerCase();
+            if (!nome || !email) { alert('Preencha nome e e-mail.'); return; }
+            if (db.users.some(x=>x.email.toLowerCase()===email && x.id!==uid)) { alert('Esse e-mail j\u00e1 \u00e9 usado por outro usu\u00e1rio.'); return; }
+            u.nome = nome;
+            u.cpf = document.getElementById('edCpf').value.trim();
+            u.whats = document.getElementById('edWhats').value.trim();
+            u.endereco = document.getElementById('edEnd').value.trim();
+            u.email = email;
+            const alunoEl = document.getElementById('edAluno');
+            if (alunoEl) {
+                const s = db.students.find(x=>x.responsavel_id===uid);
+                if (s) {
+                    s.nome = alunoEl.value.trim() || s.nome;
+                    s.periodo = document.getElementById('edPeriodo').value;
+                    s.professor = document.getElementById('edProfessor').value.trim();
+                    const escolaNome = document.getElementById('edEscola').value.trim();
+                    if (escolaNome) {
+                        let escola = db.schools.find(e=>e.nome.toLowerCase()===escolaNome.toLowerCase());
+                        if (!escola) { escola = { id:'e_'+Date.now(), nome:escolaNome, endereco:'', bairro:'' }; db.schools.push(escola); }
+                        s.escola_id = escola.id;
+                    }
+                    const valor = parseFloat(document.getElementById('edValor').value) || 0;
+                    const quinzena = document.getElementById('edQuinzena').value;
+                    const c = db.contracts.find(x=>x.student_id===s.id);
+                    if (c) {
+                        c.valor_mensal = valor;
+                        c.quinzena = quinzena;
+                        c.vencimento_dia = (quinzena==='dia20'?20:5);
+                        const r = db.routes.find(x=>x.id===c.route_id);
+                        if (r) r.valor_mensal = valor;
+                    }
+                }
+            }
+            save(); alert('Usu\u00e1rio atualizado.'); abaAdmin('usuarios');
         }
         function imprimirContrato(uid) {
             const u = db.users.find(x=>x.id===uid); if (!u) return;
@@ -840,16 +966,75 @@
         function adminContratos() {
             const contratos = db.contracts;
             if (!contratos.length) return '<p>Nenhum contrato.</p>';
-            return contratos.map(c=>{
+            return '<div id="editBoxContrato"></div>' + contratos.map(c=>{
                 const pay = (db.payments||[]).find(p=>p.contract_id===c.id);
+                const respUid = c.responsavel_id || (db.students.find(s=>s.id===c.student_id)||{}).responsavel_id;
                 return `<div class="item">
                     <div class="item-header"><span class="item-name">${studentNome(c.student_id)}</span>${statusBadge(c.status)}</div>
                     <div class="item-small">${routeNome(c.route_id)} \u00b7 Turno: ${c.turno.replace('_',' + ')} \u00b7 ${money(c.valor_mensal)}/m\u00eas</div>
-                    <div class="item-small">Respons\u00e1vel: ${userNome(c.responsavel_id)}</div>
+                    <div class="item-small">Respons\u00e1vel: ${userNome(respUid)}</div>
                     ${pay ? '<div class="item-small">Link: '+pay.link_url+' \u00b7 '+pay.status+'</div>' : ''}
-                    ${c.status==='pendente_pagamento' ? '<button class="mini-btn mb-warn" onclick="atualizarContratoAtivo(\''+c.id+'\')">Confirmar pagamento manualmente</button>' : ''}
+                    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                        ${c.status==='pendente_pagamento' ? '<button class="mini-btn mb-warn" onclick="atualizarContratoAtivo(\''+c.id+'\')">Confirmar pagamento</button>' : ''}
+                        <button class="mini-btn mb-add" onclick="editarContrato('${c.id}')">Editar</button>
+                        ${respUid ? `<button class="mini-btn mb-add" onclick="imprimirContrato('${respUid}')">Imprimir</button>` : ''}
+                        <button class="mini-btn mb-danger" onclick="excluirContrato('${c.id}')">Excluir</button>
+                    </div>
                 </div>`;
             }).join('');
+        }
+        function editarContrato(cid) {
+            const c = db.contracts.find(x=>x.id===cid); if (!c) return;
+            const box = document.getElementById('editBoxContrato'); if (!box) return;
+            box.innerHTML = `
+                <h3>Editar contrato</h3>
+                <div class="item" style="border:2px solid #0056b3;">
+                    <div class="item-small" style="margin-bottom:8px;"><b>${studentNome(c.student_id)}</b> - ${routeNome(c.route_id)}</div>
+                    <input type="hidden" id="ecId" value="${c.id}">
+                    <div class="form-group"><label>Turno</label><select id="ecTurno">
+                        <option value="ida" ${c.turno==='ida'?'selected':''}>S\u00f3 ida</option>
+                        <option value="volta" ${c.turno==='volta'?'selected':''}>S\u00f3 volta</option>
+                        <option value="ida_volta" ${c.turno==='ida_volta'?'selected':''}>Ida + volta</option></select></div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Valor (R$)</label><input id="ecValor" type="number" min="0" step="0.01" value="${c.valor_mensal}"></div>
+                        <div class="form-group"><label>Quinzena</label><select id="ecQuinzena">
+                            <option value="dia5" ${contractQuinzena(c)==='dia5'?'selected':''}>Dia 5 (1\u00aa Quinzena)</option>
+                            <option value="dia20" ${contractQuinzena(c)==='dia20'?'selected':''}>Dia 20 (2\u00aa Quinzena)</option></select></div>
+                    </div>
+                    <div class="form-group"><label>Situa\u00e7\u00e3o</label><select id="ecStatus">
+                        <option value="ativo" ${c.status==='ativo'?'selected':''}>Ativo</option>
+                        <option value="pendente_pagamento" ${c.status==='pendente_pagamento'?'selected':''}>Aguardando pagamento</option>
+                        <option value="cancelado" ${c.status==='cancelado'?'selected':''}>Cancelado</option></select></div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-add" onclick="salvarEdicaoContrato()">Salvar altera\u00e7\u00f5es</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('editBoxContrato').innerHTML=''">Cancelar</button>
+                    </div>
+                </div>`;
+            if (box.scrollIntoView) box.scrollIntoView({behavior:'smooth'});
+        }
+        function salvarEdicaoContrato() {
+            const c = db.contracts.find(x=>x.id===document.getElementById('ecId').value); if (!c) return;
+            const turno = document.getElementById('ecTurno').value;
+            const valor = parseFloat(document.getElementById('ecValor').value) || 0;
+            const quinzena = document.getElementById('ecQuinzena').value;
+            const status = document.getElementById('ecStatus').value;
+            c.turno = turno;
+            c.valor_mensal = valor;
+            c.quinzena = quinzena;
+            c.vencimento_dia = (quinzena==='dia20'?20:5);
+            c.status = status;
+            const shifts = turno==='ida_volta' ? ['ida','volta'] : [turno];
+            db.enrollments.forEach(e=>{ if (e.contract_id===c.id) e.ativo = (status==='ativo'); });
+            db.enrollments = db.enrollments.filter(e=>e.contract_id!==c.id || shifts.includes(e.shift));
+            if (status==='ativo') shifts.forEach(sh=>{ if (!db.enrollments.some(e=>e.contract_id===c.id && e.shift===sh)) db.enrollments.push({ id:'en_'+Date.now()+sh, contract_id:c.id, route_id:c.route_id, student_id:c.student_id, shift:sh, ativo:true }); });
+            save(); alert('Contrato atualizado.'); abaAdmin('contratos');
+        }
+        function excluirContrato(cid) {
+            const c = db.contracts.find(x=>x.id===cid); if(!c) return;
+            if (!confirm('Excluir o contrato de '+studentNome(c.student_id)+'? As matr\u00edculas tamb\u00e9m ser\u00e3o removidas.')) return;
+            db.contracts = db.contracts.filter(x=>x.id!==cid);
+            db.enrollments = db.enrollments.filter(e=>e.contract_id!==cid);
+            save(); abaAdmin('contratos');
         }
         function atualizarContratoAtivo(cid) {
             const c = db.contracts.find(x=>x.id===cid); if(!c) return;
@@ -859,7 +1044,7 @@
             save(); alert('Contrato ativado manualmente (exce\u00e7\u00e3o).'); render();
         }
         function adminRotas() {
-            return db.routes.map(r=>{
+            return '<div id="editBoxRota"></div>' + db.routes.map(r=>{
                 const v = db.vehicles.find(vv=>vv.id===r.vehicle_id);
                 const drv = db.drivers.find(d=>d.id===r.driver_id);
                 const motNome = drv ? userNome(drv.user_id) : 'Sem motorista';
@@ -871,8 +1056,109 @@
                     <div class="item-small">${schoolNome(r.escola_id)} \u00b7 Ida ${r.hora_ida||'-'} \u00b7 Volta ${r.hora_volta||'-'} \u00b7 ${money(r.valor_mensal)}/aluno</div>
                     <div class="item-small">Motorista: ${motNome} \u00b7 ${v?v.modelo+' - '+v.placa:'Sem ve\u00edculo'}</div>
                     <ul class="parada-list">${stops.map(s=>`<li><span class="parada-num">${s.ordem}</span>${s.endereco} <span style="font-size:11px;color:#888;">(${s.tipo})</span></li>`).join('')}</ul>
+                    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                        <button class="mini-btn mb-add" onclick="editarRota('${r.id}')">Editar</button>
+                        <button class="mini-btn mb-danger" onclick="excluirRota('${r.id}')">Excluir</button>
+                    </div>
                 </div>`;
             }).join('');
+        }
+        function editarRota(rid) {
+            const r = db.routes.find(x=>x.id===rid); if (!r) return;
+            const box = document.getElementById('editBoxRota'); if (!box) return;
+            const escolaNome = schoolNome(r.escola_id);
+            const motOpts = '<option value="">Nenhum</option>' + db.drivers.map(d=>{ const u=db.users.find(us=>us.id===d.user_id); return `<option value="${d.id}" ${d.id===r.driver_id?'selected':''}>${u?u.nome:d.id}</option>`; }).join('');
+            const veicOpts = '<option value="">Nenhum</option>' + db.vehicles.map(v=>`<option value="${v.id}" ${v.id===r.vehicle_id?'selected':''}>${v.modelo} - ${v.placa}</option>`).join('');
+            const stops = db.route_stops.filter(st=>st.route_id===r.id).sort((a,b)=>a.ordem-b.ordem);
+            const stopRows = stops.map((s,i)=>stopsRowHtml(s, i)).join('');
+            box.innerHTML = `
+                <h3>Editar rota</h3>
+                <div class="item" style="border:2px solid #0056b3;">
+                    <input type="hidden" id="erId" value="${r.id}">
+                    <div class="form-group"><label>Nome da rota</label><input id="erNome" value="${r.nome}"></div>
+                    <div class="form-group"><label>Escola (destino)</label><input id="erEscola" value="${escolaNome}"></div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Per\u00edodo</label><select id="erPeriodo">
+                            <option value="manha" ${r.periodo==='manha'||!r.periodo?'selected':''}>Manh\u00e3</option>
+                            <option value="tarde" ${r.periodo==='tarde'?'selected':''}>Tarde</option></select></div>
+                        <div class="form-group"><label>Turno</label><select id="erTurno">
+                            <option value="ida" ${r.turno==='ida'?'selected':''}>S\u00f3 ida</option>
+                            <option value="volta" ${r.turno==='volta'?'selected':''}>S\u00f3 volta</option>
+                            <option value="ida_volta" ${r.turno==='ida_volta'||!r.turno?'selected':''}>Ida + volta</option></select></div>
+                    </div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Hora ida</label><input id="erHoraIda" type="time" value="${r.hora_ida||''}"></div>
+                        <div class="form-group"><label>Hora volta</label><input id="erHoraVolta" type="time" value="${r.hora_volta||''}"></div>
+                    </div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Motorista</label><select id="erMotorista">${motOpts}</select></div>
+                        <div class="form-group"><label>Ve\u00edculo</label><select id="erVeiculo">${veicOpts}</select></div>
+                    </div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Valor (R$/aluno)</label><input id="erValor" type="number" min="0" step="0.01" value="${r.valor_mensal||''}"></div>
+                        <div class="form-group"><label>Ativa</label><select id="erAtiva">
+                            <option value="true" ${r.ativo?'selected':''}>Sim</option>
+                            <option value="false" ${r.ativo?'':'selected'}>N\u00e3o</option></select></div>
+                    </div>
+                    <div class="quinzena-title" style="margin-top:8px;">Paradas da rota</div>
+                    <div id="edStopsList">${stopRows}</div>
+                    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                        <button class="btn btn-outline" onclick="addParadaRota()">+ Parada</button>
+                        <button class="btn btn-add" onclick="salvarEdicaoRota()">Salvar altera\u00e7\u00f5es</button>
+                        <button class="btn btn-outline" onclick="document.getElementById('editBoxRota').innerHTML=''">Cancelar</button>
+                    </div>
+                </div>`;
+            if (box.scrollIntoView) box.scrollIntoView({behavior:'smooth'});
+        }
+        function stopsRowHtml(s, i) {
+            return `<div class="grid2" style="align-items:end;margin-bottom:6px;">
+                <input class="edStopAddr" value="${s.endereco}" placeholder="Endere\u00e7o">
+                <div style="display:flex;gap:4px;">
+                    <select class="edStopTipo"><option value="embarque" ${s.tipo==='embarque'?'selected':''}>Embarque</option><option value="escola" ${s.tipo==='escola'?'selected':''}>Escola</option></select>
+                    <button class="mini-btn mb-danger" onclick="this.parentNode.parentNode.parentNode.remove()">x</button>
+                </div></div>`;
+        }
+        function addParadaRota() {
+            const el = document.getElementById('edStopsList'); if (!el) return;
+            const div = document.createElement('div');
+            const inner = '<input class="edStopAddr" value="" placeholder="Endere\u00e7o">';
+            div.innerHTML = `<div class="grid2" style="align-items:end;margin-bottom:6px;">${inner}<div style="display:flex;gap:4px;"><select class="edStopTipo"><option value="embarque">Embarque</option><option value="escola">Escola</option></select><button class="mini-btn mb-danger" onclick="this.parentNode.parentNode.parentNode.remove()">x</button></div></div>`;
+            el.appendChild(div.firstChild);
+        }
+        function salvarEdicaoRota() {
+            const r = db.routes.find(x=>x.id===document.getElementById('erId').value); if (!r) return;
+            r.nome = document.getElementById('erNome').value.trim() || r.nome;
+            r.periodo = document.getElementById('erPeriodo').value;
+            r.turno = document.getElementById('erTurno').value;
+            r.hora_ida = document.getElementById('erHoraIda').value;
+            r.hora_volta = document.getElementById('erHoraVolta').value;
+            r.valor_mensal = parseFloat(document.getElementById('erValor').value) || 0;
+            r.ativo = document.getElementById('erAtiva').value === 'true';
+            r.driver_id = document.getElementById('erMotorista').value || null;
+            r.vehicle_id = document.getElementById('erVeiculo').value || null;
+            const escolaNome = document.getElementById('erEscola').value.trim();
+            if (escolaNome) {
+                let escola = db.schools.find(e=>e.nome.toLowerCase()===escolaNome.toLowerCase());
+                if (!escola) { escola = { id:'e_'+Date.now(), nome:escolaNome, endereco:'', bairro:'' }; db.schools.push(escola); }
+                r.escola_id = escola.id;
+            }
+            const addrs = Array.prototype.map.call(document.querySelectorAll('.edStopAddr'), el=>el.value.trim());
+            const tipos = Array.prototype.map.call(document.querySelectorAll('.edStopTipo'), el=>el.value);
+            const antigos = db.route_stops.filter(p=>p.route_id===r.id);
+            const novos = [];
+            addrs.forEach((a,idx)=>{ if (!a) return; const ori = antigos[idx]||{}; novos.push({ id: ori.id || ('p_'+Date.now()+'_'+idx), route_id:r.id, ordem:idx+1, endereco:a, bairro: ori.bairro||'', tipo: tipos[idx]||'embarque' }); });
+            db.route_stops = db.route_stops.filter(p=>p.route_id!==r.id).concat(novos);
+            save(); alert('Rota atualizada.'); abaAdmin('rotas');
+        }
+        function excluirRota(rid) {
+            const r = db.routes.find(x=>x.id===rid); if(!r) return;
+            const nContratos = db.contracts.filter(c=>c.route_id===rid).length;
+            if (!confirm('Excluir a rota "'+r.nome+'"?'+(nContratos?' Os '+nContratos+' contrato(s) e matr\u00edculas dessa rota tamb\u00e9m ser\u00e3o exclu\u00eddos.':''))) return;
+            db.contracts = db.contracts.filter(c=>c.route_id!==rid);
+            db.enrollments = db.enrollments.filter(e=>e.route_id!==rid);
+            db.route_stops = db.route_stops.filter(p=>p.route_id!==rid);
+            db.routes = db.routes.filter(x=>x.id!==rid);
+            save(); abaAdmin('rotas');
         }
         const CAT_DESPESA = ['Combust\u00edvel','Manuten\u00e7\u00e3o','Sal\u00e1rio','Seguro','Outros'];
         function contractQuinzena(c) { return c.quinzena || ((c.vencimento_dia||5) <= 15 ? 'dia5' : 'dia20'); }
@@ -894,11 +1180,22 @@
                     <button class="mini-btn mb-danger" onclick="removerDespesa('${e.id}')" style="margin-left:4px;">x</button>
                 </span></div>`;
         }
+        function revLinha(r) {
+            const pend = r.status !== 'pago';
+            return `<div class="resumo-item">
+                <span>${r.descricao} <span class="exp-cat">\u00b7 manual \u00b7 ${r.data||''}</span></span>
+                <span style="white-space:nowrap;">${money(r.valor)} ${statusBadge(pend?'pendente':'pago')}
+                    ${pend ? `<button class="mini-btn mb-ok" onclick="baixarRev('${r.id}')" style="margin-left:6px;">Receber</button>`
+                           : `<button class="mini-btn mb-warn" onclick="reabrirRev('${r.id}')" style="margin-left:6px;">Reabrir</button>`}
+                    <button class="mini-btn mb-danger" onclick="removerRev('${r.id}')" style="margin-left:4px;">x</button>
+                </span></div>`;
+        }
         function quinzenaBloco(titulo, q) {
             const recs = db.contracts.filter(c=>contractQuinzena(c)===q);
+            const revs = (db.revenues||[]).filter(r=>(r.quinzena||'dia5')===q);
             const desps = (db.expenses||[]).filter(e=>(e.quinzena||'dia5')===q);
-            const recTotal = recs.reduce((s,c)=>s+Number(c.valor_mensal||0),0);
-            const recReceb = recs.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const recTotal = recs.reduce((s,c)=>s+Number(c.valor_mensal||0),0) + revs.reduce((s,r)=>s+Number(r.valor||0),0);
+            const recReceb = recs.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0) + revs.filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
             const despTotal = desps.reduce((s,e)=>s+Number(e.valor||0),0);
             const despPago = desps.filter(e=>e.status==='pago').reduce((s,e)=>s+Number(e.valor||0),0);
             const saldo = recReceb - despPago;
@@ -906,7 +1203,7 @@
                 <div class="quinzena-title">${titulo}</div>
                 <div class="item" style="border-left:4px solid var(--success-green);">
                     <div style="font-weight:bold;color:var(--success-green);margin-bottom:6px;">\ud83d\udcb0 Receitas</div>
-                    ${recs.length ? recs.map(recLinha).join('') : '<p class="empty-msg">Nenhuma receita.</p>'}
+                    ${(recs.length || revs.length) ? (recs.map(recLinha).join('') + revs.map(revLinha).join('')) : '<p class="empty-msg">Nenhuma receita.</p>'}
                     <div class="resumo-item" style="font-weight:bold;border-top:1px solid #ddd;padding-top:8px;">
                         <span>Total da quinzena</span><span style="color:var(--success-green);">${money(recTotal)}</span></div>
                 </div>
@@ -922,9 +1219,14 @@
         }
         function adminFinanceiro() {
             db.expenses = db.expenses || [];
+            db.revenues = db.revenues || [];
             const contratos = db.contracts;
-            const recReceb = contratos.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
-            const recPend = contratos.filter(c=>c.status!=='ativo' && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const recContrReceb = contratos.filter(c=>c.status==='ativo').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const recContrPend = contratos.filter(c=>c.status!=='ativo' && c.status!=='cancelado').reduce((s,c)=>s+Number(c.valor_mensal||0),0);
+            const revReceb = db.revenues.filter(r=>r.status==='pago').reduce((s,r)=>s+Number(r.valor||0),0);
+            const revPend = db.revenues.filter(r=>r.status!=='pago').reduce((s,r)=>s+Number(r.valor||0),0);
+            const recReceb = recContrReceb + revReceb;
+            const recPend = recContrPend + revPend;
             const despPago = db.expenses.filter(e=>e.status==='pago').reduce((s,e)=>s+Number(e.valor||0),0);
             const despPend = db.expenses.filter(e=>e.status!=='pago').reduce((s,e)=>s+Number(e.valor||0),0);
             const saldo = recReceb - despPago;
@@ -941,7 +1243,21 @@
                 </div>
                 <div class="fin-card" style="margin-bottom:12px;"><div class="t">Saldo previsto (tudo)</div><div class="v" style="color:#0056b3;">${money(saldoPrev)}</div></div>
 
-                <div class="quinzena-title">\u2795 Nova despesa</div>
+                <div class="quinzena-title">\u2795 Incluir receita</div>
+                <div class="item" style="border-style:dashed;">
+                    <div class="form-group"><label>Descri\u00e7\u00e3o</label><input id="reDesc" placeholder="Ex: Mensalidade avulsa, venda, reembolso..."></div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Valor (R$)</label><input id="reValor" type="number" min="0" step="0.01" placeholder="0,00"></div>
+                        <div class="form-group"><label>Data</label><input id="reData" type="date" value="${hoje()}"></div>
+                    </div>
+                    <div class="grid2">
+                        <div class="form-group"><label>Quinzena</label><select id="reQuinzena"><option value="dia5">Dia 5 (1\u00aa Quinzena)</option><option value="dia20">Dia 20 (2\u00aa Quinzena)</option></select></div>
+                        <div class="form-group"><label>Situa\u00e7\u00e3o</label><select id="reStatus"><option value="pago">Recebido</option><option value="pendente">A receber</option></select></div>
+                    </div>
+                    <button class="btn btn-success" onclick="adicionarReceita()">Incluir receita</button>
+                </div>
+
+                <div class="quinzena-title">\u2795 Incluir despesa</div>
                 <div class="item" style="border-style:dashed;">
                     <div class="form-group"><label>Descri\u00e7\u00e3o</label><input id="exDesc" placeholder="Ex: Combust\u00edvel da van"></div>
                     <div class="grid2">
@@ -953,7 +1269,7 @@
                         <div class="form-group"><label>Quinzena</label><select id="exQuinzena"><option value="dia5">Dia 5 (1\u00aa Quinzena)</option><option value="dia20">Dia 20 (2\u00aa Quinzena)</option></select></div>
                     </div>
                     <div class="form-group"><label>Situa\u00e7\u00e3o</label><select id="exStatus"><option value="pendente">A pagar</option><option value="pago">J\u00e1 pago</option></select></div>
-                    <button class="btn btn-add" onclick="adicionarDespesa()">Adicionar despesa</button>
+                    <button class="btn btn-add" onclick="adicionarDespesa()">Incluir despesa</button>
                 </div>
 
                 ${quinzenaBloco('\ud83d\udcc5 1\u00aa Quinzena (Dia 5)', 'dia5')}
@@ -993,6 +1309,33 @@
             const shifts = c.turno==='ida_volta' ? ['ida','volta'] : [c.turno];
             shifts.forEach(sh => { if (!db.enrollments.some(e=>e.contract_id===cid && e.shift===sh)) db.enrollments.push({ id:'en_'+Date.now()+sh, contract_id:cid, route_id:c.route_id, student_id:c.student_id, shift:sh, ativo:true }); });
             save(); abaAdmin('financeiro');
+        }
+        function adicionarReceita() {
+            db.revenues = db.revenues || [];
+            const desc = document.getElementById('reDesc').value.trim();
+            const valor = parseFloat(document.getElementById('reValor').value) || 0;
+            if (!desc || valor <= 0) { alert('Informe a descri\u00e7\u00e3o e o valor da receita.'); return; }
+            db.revenues.push({
+                id:'r_'+Date.now(), descricao:desc,
+                valor,
+                data:document.getElementById('reData').value || hoje(),
+                quinzena:document.getElementById('reQuinzena').value,
+                status:document.getElementById('reStatus').value,
+                created_at:agora()
+            });
+            save(); abaAdmin('financeiro');
+        }
+        function baixarRev(id) {
+            const r = db.revenues.find(x=>x.id===id); if (!r) return;
+            r.status='pago'; r.recebido_em=agora(); save(); abaAdmin('financeiro');
+        }
+        function reabrirRev(id) {
+            const r = db.revenues.find(x=>x.id===id); if (!r) return;
+            r.status='pendente'; delete r.recebido_em; save(); abaAdmin('financeiro');
+        }
+        function removerRev(id) {
+            if (!confirm('Remover esta receita?')) return;
+            db.revenues = db.revenues.filter(x=>x.id!==id); save(); abaAdmin('financeiro');
         }
 
         // ================= RENDER =================
