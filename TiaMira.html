@@ -106,6 +106,7 @@
         <img src="logo.png" alt="Tia Mira Transportes" class="brand-logo">
         <p class="header-sub">Transporte escolar agendado · Acesso exclusivo</p>
         <div id="headerUser" class="header-sub"></div>
+        <div id="percursoTop"></div>
     </header>
     <div id="app" class="container"></div>
 
@@ -160,6 +161,8 @@
                     const d = JSON.parse(raw);
                     if (!d.expenses) d.expenses = [];
                     if (!d.revenues) d.revenues = [];
+                    if (!d.percursos) d.percursos = [];
+                    if (d.percursoAtivo === undefined) d.percursoAtivo = null;
                     if (Array.isArray(d.contracts)) d.contracts.forEach(c => { if (c.pago === undefined) c.pago = !!c.paid_at; });
                     if (!d._exemplosRemovidos) {
                         const EX = { users:['u_resp','u_resp2','u_pend','u_mot','u_mot2'],
@@ -247,7 +250,7 @@
             if (!u) { alert('Nenhum usu\u00e1rio dispon\u00edvel para esse perfil.'); return; }
             sessao.user_id = u.id; render();
         }
-        function logout() { pararGPS(); sessao.user_id = null; db.trip_active = null; save(); render(); }
+        function logout() { pararGPS(); pararPercursoGPS(); sessao.user_id = null; db.trip_active = null; save(); render(); }
 
         
 
@@ -572,6 +575,83 @@
             t.status='finalizado'; t.finalizado_em=agora(); t.percurso_fim=t.percurso_fim||agora();
             if (db.trip_active===tid) db.trip_active=null;
             save(); alert('Percurso finalizado.\nKM percorrido: '+String(t.km_percorrido||0).replace('.',',')+' km'); render();
+        }
+        // ===== PERCURSO GERAL (bot\u00e3o do topo) =====
+        let _pcWatch = null, _pcLast = null;
+        function kmDoDia() {
+            const soma = (db.percursos||[]).filter(p=>p.data===hoje()).reduce((s,p)=>s+Number(p.km||0),0);
+            const ativo = (db.percursoAtivo && db.percursoAtivo.data===hoje()) ? Number(db.percursoAtivo.km||0) : 0;
+            return Math.round((soma+ativo)*10)/10;
+        }
+        function kmDoMes(ym) {
+            const soma = (db.percursos||[]).filter(p=>(p.data||'').slice(0,7)===ym).reduce((s,p)=>s+Number(p.km||0),0);
+            const ativo = (db.percursoAtivo && (db.percursoAtivo.data||'').slice(0,7)===ym) ? Number(db.percursoAtivo.km||0) : 0;
+            return Math.round((soma+ativo)*10)/10;
+        }
+        function kmPorMes() {
+            const map = {};
+            (db.percursos||[]).forEach(p=>{ const m=(p.data||'').slice(0,7); if(!m) return; map[m]=(map[m]||0)+Number(p.km||0); });
+            if (db.percursoAtivo && db.percursoAtivo.data) { const m=db.percursoAtivo.data.slice(0,7); map[m]=(map[m]||0)+Number(db.percursoAtivo.km||0); }
+            return map;
+        }
+        function renderPercursoTop() {
+            const el = document.getElementById('percursoTop'); if (!el) return;
+            const u = userAtual();
+            if (!u || (u.tipo!=='admin' && u.tipo!=='motorista')) { el.innerHTML = ''; return; }
+            const ativo = !!db.percursoAtivo;
+            const kmDia = kmDoDia();
+            el.innerHTML = `
+                <button onclick="${ativo?'finalizarPercurso()':'iniciarPercurso()'}"
+                    style="width:100%;max-width:560px;margin:8px auto 4px;display:block;padding:15px;border:none;border-radius:14px;
+                    font-size:17px;font-weight:bold;cursor:pointer;letter-spacing:.3px;
+                    background:${ativo?'#dc3545':'#ffc107'};color:${ativo?'#fff':'#3a2c00'};
+                    box-shadow:0 3px 10px rgba(0,0,0,.18);">
+                    ${ativo ? '\u25a0 PARAR PERCURSO' : '\u25b6 INICIAR PERCURSO'}
+                </button>
+                <div style="font-size:13px;color:#444;margin:0 auto 6px;text-align:center;">
+                    ${ativo ? 'Em andamento \u00b7 KM hoje: ' : 'KM hoje: '}<b>${String(kmDia).replace('.',',')} km</b>
+                </div>`;
+        }
+        function iniciarPercurso() {
+            if (db.percursoAtivo) return;
+            if (typeof navigator === 'undefined' || !navigator.geolocation) { alert('GPS indispon\u00edvel neste dispositivo. Abra em um celular com localiza\u00e7\u00e3o ativada.'); return; }
+            db.percursoAtivo = { id:'pc_'+Date.now(), data:hoje(), inicio:agora(), km:0, trajeto:[] };
+            _pcLast = null; save();
+            _pcWatch = navigator.geolocation.watchPosition(function(pos){
+                const p = [pos.coords.latitude, pos.coords.longitude];
+                const a = db.percursoAtivo; if (!a) return;
+                if (_pcLast) {
+                    const d = haversineKm(_pcLast, p);
+                    if (d >= 0.005) { a.km = Math.round((a.km+d)*100)/100; a.trajeto.push(p); _pcLast = p; save(); renderPercursoTop(); }
+                } else { _pcLast = p; a.trajeto = [p]; a.lat=p[0]; a.lon=p[1]; save(); renderPercursoTop(); }
+            }, function(err){
+                alert('N\u00e3o foi poss\u00edvel ler o GPS. Habilite a localiza\u00e7\u00e3o do aparelho.');
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+            renderPercursoTop();
+        }
+        function finalizarPercurso() {
+            const a = db.percursoAtivo; if (!a) return;
+            pararPercursoGPS();
+            a.fim = agora();
+            db.percursos = db.percursos || [];
+            db.percursos.push({ id:a.id, data:a.data, inicio:a.inicio, fim:a.fim, km:Math.round(Number(a.km||0)*10)/10, pontos:(a.trajeto||[]).length });
+            const km = a.km; db.percursoAtivo = null; save();
+            alert('Percurso finalizado.\nKM deste percurso: '+String(Math.round(km*10)/10).replace('.',',')+' km\nTotal de hoje: '+String(kmDoDia()).replace('.',',')+' km');
+            renderPercursoTop();
+        }
+        function pararPercursoGPS() {
+            if (_pcWatch !== null && typeof navigator!=='undefined' && navigator.geolocation) { try { navigator.geolocation.clearWatch(_pcWatch); } catch(e){} }
+            _pcWatch = null; _pcLast = null;
+        }
+        function kmMensalHtml() {
+            const map = kmPorMes();
+            const keys = Object.keys(map).sort().reverse();
+            if (!keys.length) return '<p class="empty-msg">Nenhum percurso registrado ainda. Use o bot\u00e3o INICIAR PERCURSO no topo.</p>';
+            const nomeMes = { '01':'Janeiro','02':'Fevereiro','03':'Mar\u00e7o','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro' };
+            return keys.map(m=>{
+                const [ano,mes] = m.split('-');
+                return `<div class="resumo-item"><span>${(nomeMes[mes]||mes)+' '+ano}</span><span style="font-weight:bold;color:#0056b3;">${String(Math.round(map[m]*10)/10).replace('.',',')} km</span></div>`;
+            }).join('');
         }
         function abrirPresenca(tid) {
             const t = db.trips.find(x=>x.id===tid); if (!t) return;
@@ -1191,7 +1271,11 @@
             save(); alert('Contrato ativado manualmente (exce\u00e7\u00e3o).'); render();
         }
         function adminRotas() {
-            return '<div id="editBoxRota"></div>' + db.routes.map(r=>{
+            return '<div id="editBoxRota"></div>'
+                + '<div class="quinzena-title">Consumo de KM por m\u00eas (percurso real)</div>'
+                + '<div class="item">' + kmMensalHtml()
+                + '<div class="resumo-item" style="font-weight:bold;border-top:1px solid #ddd;padding-top:8px;"><span>Hoje ('+hoje()+')</span><span style="color:#28a745;">'+String(kmDoDia()).replace('.',',')+' km</span></div></div>'
+                + db.routes.map(r=>{
                 const v = db.vehicles.find(vv=>vv.id===r.vehicle_id);
                 const drv = db.drivers.find(d=>d.id===r.driver_id);
                 const motNome = drv ? userNome(drv.user_id) : 'Sem motorista';
@@ -1585,15 +1669,17 @@
             const app = document.getElementById('app');
             const u = userAtual();
             const hd = document.getElementById('headerUser');
-            if (!u) { hd.textContent=''; app.innerHTML = loginView(); return; }
+            if (!u) { hd.textContent=''; app.innerHTML = loginView(); renderPercursoTop(); return; }
             hd.textContent = 'Conectado: '+u.nome+' ('+(u.tipo==='admin'?'Administrativo':u.tipo)+')';
             if (u.status !== 'aprovado') {
                 app.innerHTML = `<div class="notice"><b>Seu cadastro est\u00e1 em an\u00e1lise.</b><br>Status: ${statusBadge('pendente')}<br>Voc\u00ea ser\u00e1 avisado por WhatsApp/e-mail quando aprovado.</div><button class="btn btn-outline" onclick="logout()">Sair</button>`;
+                renderPercursoTop();
                 return;
             }
             if (u.tipo === 'admin') app.innerHTML = adminView(u);
             else if (u.tipo === 'motorista') app.innerHTML = motoristaView(u);
             else app.innerHTML = responsavelView(u);
+            renderPercursoTop();
         }
 
         // ================= PROTE\u00c7\u00c3O POR PIN (igual ao Control) =================
