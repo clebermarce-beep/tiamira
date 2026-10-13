@@ -770,13 +770,22 @@
             alert('Aluno cadastrado! Contrato ATIVO e rota criados automaticamente.\n\nAcesso do respons\u00e1vel: '+email+' / senha 1234');
             abaAdmin('usuarios');
         }
+        function fetchJson(url, ms) {
+            const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const timer = setTimeout(()=>{ if (ctrl) ctrl.abort(); }, ms || 8000);
+            return fetch(url, ctrl ? { signal: ctrl.signal } : undefined)
+                .then(r => r.json())
+                .then(j => { clearTimeout(timer); return j; }, e => { clearTimeout(timer); throw e; });
+        }
+        function nCoord(a) { return (a && a[0]) ? [parseFloat(a[0].lon), parseFloat(a[0].lat)] : null; }
         function geocodeAddr(q) {
             const photon = 'https://photon.komoot.io/api/?limit=1&lang=pt&q='+encodeURIComponent(q);
             const nominatim = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q='+encodeURIComponent(q);
-            return fetch(photon).then(r=>r.json()).then(js=>{
+            return fetchJson(photon).then(js=>{
                 if (js && js.features && js.features[0]) { const co = js.features[0].geometry.coordinates; return [co[0], co[1]]; }
-                return fetch(nominatim).then(r=>r.json()).then(a=>{ if (a && a[0]) return [parseFloat(a[0].lon), parseFloat(a[0].lat)]; return null; });
-            }).catch(()=> fetch(nominatim).then(r=>r.json()).then(a=>{ if (a && a[0]) return [parseFloat(a[0].lon), parseFloat(a[0].lat)]; return null; }).catch(()=>null));
+                return null;
+            }).catch(()=>null)
+              .then(p => p || fetchJson(nominatim).then(nCoord).catch(()=>null));
         }
         function osrmDistance(c1, c2) {
             const coords = c1.join(',')+';'+c2.join(',');
@@ -785,8 +794,8 @@
                 'https://routing.openstreetmap.de/routed-car/route/v1/driving/'+coords+'?overview=false'
             ];
             const parse = js => (js && js.routes && js.routes[0]) ? js.routes[0].distance : null;
-            return fetch(servers[0]).then(r=>r.json()).then(parse).catch(()=>null)
-                .then(d => d || fetch(servers[1]).then(r=>r.json()).then(parse).catch(()=>null));
+            return fetchJson(servers[0]).then(parse).catch(()=>null)
+                .then(d => d || fetchJson(servers[1]).then(parse).catch(()=>null));
         }
         let _kmTimer = null;
         function autoCalcKm(aId, bId, outId) {
@@ -796,7 +805,7 @@
             const a = aEl.value.trim(), b = bEl.value.trim();
             if (!a || !b || a.length < 5 || b.length < 5) return;
             if (_kmTimer) clearTimeout(_kmTimer);
-            _kmTimer = setTimeout(()=>calcKmRota(true, aId, bId, outId), 800);
+            _kmTimer = setTimeout(()=>calcKmRota(true, aId, bId, outId), 900);
         }
         function calcKmRota(silent, aId, bId, outId) {
             aId = aId || 'rEmbarque'; bId = bId || 'rEntrega'; outId = outId || 'rKm';
@@ -808,14 +817,15 @@
             out.placeholder = 'Calculando...';
             Promise.all([geocodeAddr(a), geocodeAddr(b)])
                 .then(res => {
-                    if (!res[0] || !res[1]) { out.value=''; if (!silent) alert('N\u00e3o foi poss\u00edvel localizar os endere\u00e7os. Digite o KM manualmente.'); return null; }
+                    if (!res[0] || !res[1]) { out.placeholder = ''; if (!silent) alert('N\u00e3o foi poss\u00edvel localizar os endere\u00e7os. Digite o KM manualmente.'); return null; }
                     return osrmDistance(res[0], res[1]);
                 })
                 .then(dist => {
-                    if (dist) { out.value = Math.max(1, Math.round(dist/1000*10)/10); out.placeholder=''; }
-                    else { out.value=''; if (!silent) alert('N\u00e3o foi poss\u00edvel calcular o percurso. Digite o KM manualmente.'); }
+                    out.placeholder = '';
+                    if (dist) { out.value = Math.max(1, Math.round(dist/1000*10)/10); }
+                    else if (!silent) { alert('N\u00e3o foi poss\u00edvel calcular o percurso. Digite o KM manualmente.'); }
                 })
-                .catch(()=>{ out.value=''; if (!silent) alert('Sem internet ou servi\u00e7o indispon\u00edvel. Digite o KM manualmente.'); });
+                .catch(()=>{ out.placeholder = ''; if (!silent) alert('Sem internet ou servi\u00e7o indispon\u00edvel. Digite o KM manualmente.'); });
         }
         function salvarMeuAcesso() {
             const u = userAtual(); if (!u) return;

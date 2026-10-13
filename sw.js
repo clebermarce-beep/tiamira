@@ -1,4 +1,4 @@
-const CACHE = 'tiamira-v1';
+const CACHE = 'tiamira-v3';
 const ASSETS = [
   './TiaMira.html',
   './manifest.json',
@@ -21,14 +21,16 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      return cached || fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      }).catch(() => cached);
-    })
+    fetch(req).then(res => {
+      const clone = res.clone();
+      caches.open(CACHE).then(c => c.put(req, clone)).catch(()=>{});
+      return res;
+    }).catch(() => caches.match(req))
   );
 });
